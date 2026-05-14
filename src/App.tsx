@@ -37,6 +37,13 @@ function App() {
   const [selectedEatingSeats, setSelectedEatingSeats] = useState<string[]>([])
   const [eatingDisplayNumber, setEatingDisplayNumber] = useState("")
   const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
+  type EatingGroup = {
+    seats: string[]
+    representativeSeatId: string
+    displayNumber: string
+  }
+
+  const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
   const [reservationMode, setReservationMode] = useState(false)
   const [selectedReserveSeats, setSelectedReserveSeats] = useState<string[]>([])
   const [reserveTimeText, setReserveTimeText] = useState("")
@@ -166,25 +173,90 @@ function App() {
   }
 
   const handleLeave = (id: string) => {
-    setSeatTimes((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
+    const group = getEatingGroupBySeatId(id)
+
+    // グループ席ではない場合：通常退店
+    if (!group) {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [id]: "empty",
+      }))
+
+      setSeatTimes((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+
+      setEatingLabels((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+
+      return
+    }
+
+    // 代表席を退店した場合：グループ全体を退店
+    if (id === group.representativeSeatId) {
+      group.seats.forEach((seatId) => {
+        setSeatStatuses((prev) => ({
+          ...prev,
+          [seatId]: "empty",
+        }))
+
+        setSeatTimes((prev) => {
+          const next = { ...prev }
+          delete next[seatId]
+          return next
+        })
+      })
+
+      setEatingLabels((prev) => {
+        const next = { ...prev }
+
+        group.seats.forEach((seatId) => {
+          delete next[seatId]
+        })
+
+        return next
+      })
+
+      setEatingGroups((prev) => prev.filter((g) => g !== group))
+
+      return
+    }
+
+    // 代表席ではない席を退店しようとした場合
+    const otherSeats = group.seats.filter((seatId) => seatId !== id)
+
+    const message = `${otherSeats.join("席、")}席のお客様は退店していませんが、退店しますか`
+
+    const ok = window.confirm(message)
+
+    if (!ok) return
+
+    // はい：この席だけグループから外して、元の席番号を表示
+    setEatingGroups((prev) =>
+      prev.map((g) => {
+        if (g !== group) return g
+
+        return {
+          ...g,
+          seats: g.seats.filter((seatId) => seatId !== id),
+        }
+      })
+    )
+
+    setEatingLabels((prev) => ({
+      ...prev,
+      [id]: id,
+    }))
 
     setSeatStatuses((prev) => ({
       ...prev,
       [id]: "empty",
     }))
-
-    firedRef.current[`${id}-donabe`] = false
-    firedRef.current[`${id}-food`] = false
-
-    setNotifications((prev) =>
-      prev.filter(
-        (n) => n.text !== `土鍋 ${id}` && n.text !== `フード ${id}`
-      )
-    )
   }
 
   const getSeatGroup = (id: string) => {
@@ -266,6 +338,17 @@ function App() {
 
       return next
     })
+
+        if (selectedEatingSeats.length > 1) {
+      setEatingGroups((prev) => [
+        ...prev,
+        {
+          seats: selectedEatingSeats,
+          representativeSeatId,
+          displayNumber: label,
+        },
+      ])
+    }
 
     setActiveSeatId(null)
     setSelectedEatingSeats([])
@@ -638,6 +721,10 @@ function App() {
         height: bottom - top,
       }
     }
+
+      const getEatingGroupBySeatId = (seatId: string) => {
+        return eatingGroups.find((group) => group.seats.includes(seatId))
+      }
 
   return (
     <div>
