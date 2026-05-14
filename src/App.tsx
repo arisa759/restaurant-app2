@@ -80,10 +80,21 @@ function App() {
       setActiveSeatId(id)
       setSelectedEatingSeats([id])
       setEatingDisplayNumber("")
-    }
+  }
 
-    const handleEatingSeatClick = (id: string) => {
+  const clearEatingSelection = () => {
+    setActiveSeatId(null)
+    setSelectedEatingSeats([])
+    setEatingDisplayNumber("")
+  }
+
+  const handleEatingSeatClick = (id: string) => {
     if (!activeSeatId) return
+
+    // 最初に長押しした席は、タップしても解除しない
+    if (id === activeSeatId) {
+      return
+    }
 
     const clickedGroup = getSeatGroup(id)
 
@@ -98,7 +109,6 @@ function App() {
 
     setSelectedEatingSeats((prev) => {
       if (prev.includes(id)) {
-        if (prev.length === 1) return prev
         return prev.filter((seatId) => seatId !== id)
       }
 
@@ -564,6 +574,7 @@ function App() {
     onEatingSeatClick: handleEatingSeatClick,
     onOpenSeatMenu: handleOpenSeatMenu,
     onStartEatingSeats: handleStartEatingSeats,
+    onClearEatingSelection: clearEatingSelection,
     displayLabel:
       eatingLabels[id] !== undefined
         ? eatingLabels[id]

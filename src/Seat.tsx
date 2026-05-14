@@ -18,6 +18,7 @@ type Props = {
   onEatingSeatClick?: (id: string) => void
   onOpenSeatMenu?: (id: string) => void
   onStartEatingSeats?: () => void
+  onClearEatingSelection?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -46,6 +47,7 @@ function Seat({
   onEatingSeatClick,
   onOpenSeatMenu,
   onStartEatingSeats,
+  onClearEatingSelection,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
   const [startTime, setStartTime] = useState<Date | null>(null)
@@ -107,12 +109,12 @@ function Seat({
     onLeave(id)
     setStartTime(null)
     setShowMenu(false)
-    setActiveSeatId(null)
+    onClearEatingSelection?.()
   }
 
   const handleClose = () => {
     setShowMenu(false)
-    setActiveSeatId(null)
+    onClearEatingSelection?.()
   }
   const seatColor =
   status === "food"
@@ -145,7 +147,7 @@ function Seat({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => e.preventDefault()}
-        onClick={() => {
+       onClick={() => {
           if (activeSeatId) {
             onEatingSeatClick?.(id)
             return
