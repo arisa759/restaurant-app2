@@ -357,24 +357,24 @@ function App() {
         const diff = (reserveTime.getTime() - now.getTime()) / 60000
 
         setSeatStatuses((prev) => {
-        if (
-          prev[id] === "occupied" ||
-          prev[id] === "donabe" ||
-          prev[id] === "food"
-        ) {
-          return prev
-        }
+          if (
+            prev[id] === "occupied" ||
+            prev[id] === "donabe" ||
+            prev[id] === "food"
+          ) {
+            return prev
+          }
 
-       if (diff <= 30) {
-          return { ...prev, [id]: "reserved30m" }
-        }
+          if (diff >= 0 && diff <= 30) {
+            return { ...prev, [id]: "reserved30m" }
+          }
 
-        if (diff <= 60) {
-          return { ...prev, [id]: "reserved1h" }
-        }
-        
-        return { ...prev, [id]: "reserved2h" }
-      })
+          if (diff > 30 && diff <= 60) {
+            return { ...prev, [id]: "reserved1h" }
+          }
+
+          return { ...prev, [id]: "reserved2h" }
+        })
       })
     }, 1000)
 
@@ -632,7 +632,11 @@ function App() {
       >
 
       {mergedReserveGroups.map((group, index) => {
-          if (!group.pendingUntilEmpty) return null
+          const stillEating = group.seats.some((seatId) =>
+            ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
+          )
+
+          if (!group.pendingUntilEmpty || !stillEating) return null
 
           const box = getMergedBox(group.seats)
           if (!box) return null
