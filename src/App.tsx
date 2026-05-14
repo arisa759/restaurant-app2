@@ -438,14 +438,6 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
-  const getMergedGroup = (id: string) => {
-    return mergedReserveGroups.find((group) => group.seats.includes(id))
-  }
-
-    const isMergedSeat = (id: string) => {
-      return getMergedGroup(id) !== undefined
-    }
-
     const seatCommonProps = (id: string) => ({
       activeSeatId,
       setActiveSeatId,
@@ -453,7 +445,6 @@ function App() {
       onLeave: handleLeave,
       status: seatStatuses[id] ?? "empty",
       onSeatClick: handleReserveSeatClick,
-      isReserveSelected: selectedReserveSeats.includes(id),
       displayLabel:
         reservationLabels[id] !== undefined ? reservationLabels[id] : id,
     })
@@ -513,15 +504,6 @@ function App() {
         height: bottom - top,
       }
     }
-
-  const isOverlappingGroup = (group: string[], index: number) => {
-    const previousGroups = mergedReserveGroups.slice(0, index)
-
-    return previousGroups.some((prevGroup) =>
-      group.some((seatId) => prevGroup.seats.includes(seatId))
-    )
-  }
-
 
   return (
     <div>

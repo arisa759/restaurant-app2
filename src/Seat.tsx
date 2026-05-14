@@ -36,8 +36,6 @@ function Seat({
   onLeave,
   status = "empty",
   onSeatClick,
-  isReserveSelected = false,
-  isMerged = false,
   displayLabel,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
