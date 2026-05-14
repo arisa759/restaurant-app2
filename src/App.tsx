@@ -16,6 +16,12 @@ type SeatStatus =
   | "reserved1h"
   | "reserved30m"
 
+  type MergedReserveGroup = {
+  seats: string[]
+  reservationSeatNumber: string
+  pendingUntilEmpty: boolean
+}
+
 function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeSeatId, setActiveSeatId] = useState<string | null>(null)
@@ -32,7 +38,8 @@ function App() {
   const [selectedReserveSeats, setSelectedReserveSeats] = useState<string[]>([])
   const [reserveTimeText, setReserveTimeText] = useState("")
   const [reserveDisplayNumber, setReserveDisplayNumber] = useState("")
-  const [mergedReserveGroups, setMergedReserveGroups] = useState<string[][]>([])
+  const [mergedReserveGroups, setMergedReserveGroups] = useState<MergedReserveGroup[]>([])
+  const [reservationLabels, setReservationLabels] = useState<{ [key: string]: string }>({})
   const reservationTimeOptions = Array.from({ length: 61 }, (_, i) => {
   const totalMinutes = 17 * 60 + i * 5
   const hour = Math.floor(totalMinutes / 60)
@@ -141,6 +148,26 @@ function App() {
     })
   }
 
+  const getRepresentativeSeatId = (seats: string[]) => {
+    if (seats.length === 0) return ""
+
+    const group = getSeatGroup(seats[0])
+
+    if (group === "counter") {
+      return [...seats].sort((a, b) => {
+        const numA = Number(a.replace("k", "").replace("(", "").replace(")", ""))
+        const numB = Number(b.replace("k", "").replace("(", "").replace(")", ""))
+        return numA - numB
+      })[0]
+    }
+
+    if (group === "zashiki" || group === "table") {
+      return [...seats].sort((a, b) => Number(a) - Number(b))[0]
+    }
+
+    return seats[0]
+  }
+
   const getReservationSeatNumber = () => {
     if (selectedReserveSeats.length === 0) return ""
 
@@ -197,29 +224,51 @@ function App() {
     reserveTime.setSeconds(0)
     reserveTime.setMilliseconds(0)
 
+    const hasEatingSeat = selectedReserveSeats.some((seatId) =>
+      ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
+    )
+
+    const representativeSeatId = getRepresentativeSeatId(selectedReserveSeats)
+
     selectedReserveSeats.forEach((seatId) => {
       setReservationTimes((prev) => ({
         ...prev,
         [seatId]: reserveTime,
       }))
 
-      setSeatStatuses((prev) => {
-      if (
-        prev[seatId] === "occupied" ||
-        prev[seatId] === "donabe" ||
-        prev[seatId] === "food"
-      ) {
-        return prev
+      if (!hasEatingSeat) {
+        setSeatStatuses((prev) => ({
+          ...prev,
+          [seatId]: "reserved2h",
+        }))
       }
+    })
 
-      return {
+    if (selectedReserveSeats.length > 1 && hasEatingSeat) {
+      setMergedReserveGroups((prev) => [
         ...prev,
-        [seatId]: "reserved2h",
-      }
-    })
-    })
-    if (selectedReserveSeats.length > 1) {
-      setMergedReserveGroups((prev) => [...prev, selectedReserveSeats])
+        {
+          seats: selectedReserveSeats,
+          reservationSeatNumber,
+          pendingUntilEmpty: true,
+        },
+      ])
+    }
+
+    if (!hasEatingSeat) {
+      setReservationLabels((prev) => {
+        const next = { ...prev }
+
+        selectedReserveSeats.forEach((seatId) => {
+          if (seatId === representativeSeatId) {
+            next[seatId] = reservationSeatNumber
+          } else {
+            next[seatId] = ""
+          }
+        })
+
+        return next
+      })
     }
 
     alert(`予約席番号：${reservationSeatNumber}\n予約時間：${reserveTimeText}`)
@@ -229,6 +278,45 @@ function App() {
     setReserveTimeText("")
     setReserveDisplayNumber("")
   }
+
+  useEffect(() => {
+  mergedReserveGroups.forEach((group) => {
+    if (!group.pendingUntilEmpty) return
+
+    const stillEating = group.seats.some((seatId) =>
+      ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
+    )
+
+    if (stillEating) return
+
+    const representativeSeatId = getRepresentativeSeatId(group.seats)
+
+    group.seats.forEach((seatId) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [seatId]: "reserved2h",
+      }))
+    })
+
+    setReservationLabels((prev) => {
+      const next = { ...prev }
+
+      group.seats.forEach((seatId) => {
+        if (seatId === representativeSeatId) {
+          next[seatId] = group.reservationSeatNumber
+        } else {
+          next[seatId] = ""
+        }
+      })
+
+      return next
+    })
+
+    setMergedReserveGroups((prev) =>
+      prev.filter((g) => g !== group)
+    )
+  })
+}, [seatStatuses, mergedReserveGroups])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -277,19 +365,15 @@ function App() {
           return prev
         }
 
-        if (diff <= 30) {
+       if (diff <= 30) {
           return { ...prev, [id]: "reserved30m" }
         }
 
         if (diff <= 60) {
           return { ...prev, [id]: "reserved1h" }
         }
-
-        if (diff <= 120) {
-          return { ...prev, [id]: "reserved2h" }
-        }
-
-        return prev
+        
+        return { ...prev, [id]: "reserved2h" }
       })
       })
     }, 1000)
@@ -354,9 +438,9 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
-   const getMergedGroup = (id: string) => {
-      return mergedReserveGroups.find((group) => group.includes(id))
-    }
+  const getMergedGroup = (id: string) => {
+    return mergedReserveGroups.find((group) => group.seats.includes(id))
+  }
 
     const isMergedSeat = (id: string) => {
       return getMergedGroup(id) !== undefined
@@ -370,7 +454,8 @@ function App() {
       status: seatStatuses[id] ?? "empty",
       onSeatClick: handleReserveSeatClick,
       isReserveSelected: selectedReserveSeats.includes(id),
-      isMerged: isMergedSeat(id),
+      displayLabel:
+        reservationLabels[id] !== undefined ? reservationLabels[id] : id,
     })
 
     const seatLayout: { [key: string]: { top: number; left: number; width: number; height: number } } = {
@@ -433,7 +518,7 @@ function App() {
     const previousGroups = mergedReserveGroups.slice(0, index)
 
     return previousGroups.some((prevGroup) =>
-      group.some((seatId) => prevGroup.includes(seatId))
+      group.some((seatId) => prevGroup.seats.includes(seatId))
     )
   }
 
@@ -534,6 +619,7 @@ function App() {
           </button>
         </div>
       )}
+      
 
       <div
         style={{
@@ -546,10 +632,10 @@ function App() {
       >
 
       {mergedReserveGroups.map((group, index) => {
-          const box = getMergedBox(group)
-          if (!box) return null
+          if (!group.pendingUntilEmpty) return null
 
-          const isOverlap = isOverlappingGroup(group, index)
+          const box = getMergedBox(group.seats)
+          if (!box) return null
 
           return (
             <div
@@ -560,11 +646,9 @@ function App() {
                 left: box.left,
                 width: box.width,
                 height: box.height,
-                border: isOverlap ? "4px solid blue" : "4px solid black",
-                backgroundColor: isOverlap
-                  ? "rgba(46, 139, 192, 0.25)"
-                  : "rgba(144, 238, 144, 0.35)",
-                zIndex: isOverlap ? 8 : 5,
+                border: "4px solid black",
+                backgroundColor: "rgba(135, 206, 250, 0.25)",
+                zIndex: 5,
                 pointerEvents: "none",
               }}
             />

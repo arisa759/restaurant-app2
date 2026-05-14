@@ -13,6 +13,7 @@ type Props = {
   onLeave: (id: string) => void
   isReserveSelected?: boolean
   isMerged?: boolean
+  displayLabel?: string
   status?:
     | "empty"
     | "occupied"
@@ -37,6 +38,7 @@ function Seat({
   onSeatClick,
   isReserveSelected = false,
   isMerged = false,
+  displayLabel,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
   const [startTime, setStartTime] = useState<Date | null>(null)
@@ -112,10 +114,17 @@ function Seat({
     ? "orange"
     : status === "occupied"
     ? "#bdbdbd"
+    : status === "reserved30m"
+    ? "black"
+    : status === "reserved1h"
+    ? "#007bff"
+    : status === "reserved2h"
+    ? "#87cefa"
     : "white"
 
-    const displayColor =
-     isReserveSelected ? "yellow" : seatColor
+  const textColor =
+  status === "reserved30m" || status === "reserved1h" ? "white" : "black"
+  const displayColor = seatColor
 
   return (
 
@@ -132,7 +141,7 @@ function Seat({
             width: width,
             height: height,
             backgroundColor: displayColor,
-            color: "black",
+            color: textColor,
             border: isMerged ? "1px solid transparent" : "2px solid black",
             outline: isMerged ? "2px solid black" : "none",
             borderRadius: 0,
@@ -153,7 +162,7 @@ function Seat({
         }}
       >
 
-            <div>{id}</div>
+        <div>{displayLabel ?? id}</div>
 
         {startTime && (
             <>
