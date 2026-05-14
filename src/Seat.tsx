@@ -14,6 +14,10 @@ type Props = {
   isReserveSelected?: boolean
   isMerged?: boolean
   displayLabel?: string
+  isEatingSelected?: boolean
+  onEatingSeatClick?: (id: string) => void
+  onOpenSeatMenu?: (id: string) => void
+  onStartEatingSeats?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -38,6 +42,10 @@ function Seat({
   onSeatClick,
   displayLabel,
   isReserveSelected = false,
+  isEatingSelected = false,
+  onEatingSeatClick,
+  onOpenSeatMenu,
+  onStartEatingSeats,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
   const [startTime, setStartTime] = useState<Date | null>(null)
@@ -77,7 +85,7 @@ function Seat({
     timerRef.current = window.setTimeout(() => {
       longPressRef.current = true
       setShowMenu(true)
-      setActiveSeatId(id)
+      onOpenSeatMenu?.(id)
     }, 600)
   }
 
@@ -123,7 +131,12 @@ function Seat({
 
   const textColor =
   status === "reserved30m" || status === "reserved1h" ? "white" : "black"
-  const displayColor = isReserveSelected ? "yellow" : seatColor
+  const displayColor =
+  isEatingSelected
+    ? "yellow"
+    : isReserveSelected
+    ? "yellow"
+    : seatColor
 
   return (
 
@@ -132,7 +145,14 @@ function Seat({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => e.preventDefault()}
-        onClick={() => onSeatClick?.(id)}
+        onClick={() => {
+          if (activeSeatId) {
+            onEatingSeatClick?.(id)
+            return
+          }
+
+          onSeatClick?.(id)
+        }}
         style={{
             position: "absolute",
             top: top,
@@ -193,7 +213,15 @@ function Seat({
             }}
         >
             <button
-            onClick={handleStart}
+            onClick={() => {
+              if (onStartEatingSeats) {
+                onStartEatingSeats()
+              } else {
+                handleStart()
+              }
+
+              setShowMenu(false)
+            }}
             style={{
                 width: "100%",
                 padding: 12,

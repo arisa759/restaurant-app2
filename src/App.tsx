@@ -34,6 +34,9 @@ function App() {
     notificationId: string
   } | null>(null)
 
+  const [selectedEatingSeats, setSelectedEatingSeats] = useState<string[]>([])
+  const [eatingDisplayNumber, setEatingDisplayNumber] = useState("")
+  const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
   const [reservationMode, setReservationMode] = useState(false)
   const [selectedReserveSeats, setSelectedReserveSeats] = useState<string[]>([])
   const [reserveTimeText, setReserveTimeText] = useState("")
@@ -72,6 +75,62 @@ function App() {
       minute: "2-digit",
     })
   }
+
+  const handleOpenSeatMenu = (id: string) => {
+      setActiveSeatId(id)
+      setSelectedEatingSeats([id])
+      setEatingDisplayNumber("")
+    }
+
+    const handleEatingSeatClick = (id: string) => {
+    if (!activeSeatId) return
+
+    const clickedGroup = getSeatGroup(id)
+
+    if (selectedEatingSeats.length > 0) {
+      const currentGroup = getSeatGroup(selectedEatingSeats[0])
+
+      if (clickedGroup !== currentGroup) {
+        alert("同じ種類の席だけ選択できます")
+        return
+      }
+    }
+
+    setSelectedEatingSeats((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev
+        return prev.filter((seatId) => seatId !== id)
+      }
+
+      return [...prev, id]
+    })
+  }
+
+  const getEatingSeatNumber = () => {
+    if (selectedEatingSeats.length === 0) return ""
+
+    const group = getSeatGroup(selectedEatingSeats[0])
+
+    if (group === "counter") {
+      return [...selectedEatingSeats].sort((a, b) => {
+        const numA = Number(a.replace("k", "").replace("(", "").replace(")", ""))
+        const numB = Number(b.replace("k", "").replace("(", "").replace(")", ""))
+        return numA - numB
+      })[0]
+    }
+
+    if (group === "zashiki") {
+      return [...selectedEatingSeats].sort((a, b) => Number(a) - Number(b))[0]
+    }
+
+    if (group === "table") {
+      return eatingDisplayNumber
+    }
+
+    return selectedEatingSeats[0]
+  }
+
+
 
   const handleStart = (id: string, time: Date) => {
     const currentStatus = seatStatuses[id]
@@ -146,6 +205,61 @@ function App() {
 
       return [...prev, id]
     })
+  }
+
+  const handleStartEatingSeats = () => {
+    if (selectedEatingSeats.length === 0) return
+
+    const group = getSeatGroup(selectedEatingSeats[0])
+    const displayNumber = getEatingSeatNumber()
+
+    if (group === "table" && selectedEatingSeats.length > 1 && !displayNumber) {
+      alert("テーブル席番号を選択してください")
+      return
+    }
+
+    const alreadyEating = selectedEatingSeats.some((seatId) =>
+      ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
+    )
+
+    if (alreadyEating) {
+      alert("お食事中です。")
+      return
+    }
+
+    const now = new Date()
+    const representativeSeatId = getRepresentativeSeatId(selectedEatingSeats)
+    const label = displayNumber || representativeSeatId
+
+    selectedEatingSeats.forEach((seatId) => {
+      setSeatTimes((prev) => ({
+        ...prev,
+        [seatId]: now,
+      }))
+
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [seatId]: "occupied",
+      }))
+    })
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+
+      selectedEatingSeats.forEach((seatId) => {
+        if (seatId === representativeSeatId) {
+          next[seatId] = label
+        } else {
+          next[seatId] = ""
+        }
+      })
+
+      return next
+    })
+
+    setActiveSeatId(null)
+    setSelectedEatingSeats([])
+    setEatingDisplayNumber("")
   }
 
   const getRepresentativeSeatId = (seats: string[]) => {
@@ -438,17 +552,25 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
-    const seatCommonProps = (id: string) => ({
-      activeSeatId,
-      setActiveSeatId,
-      onStart: handleStart,
-      onLeave: handleLeave,
-      status: seatStatuses[id] ?? "empty",
-      onSeatClick: handleReserveSeatClick,
-      isReserveSelected: selectedReserveSeats.includes(id),
-      displayLabel:
-        reservationLabels[id] !== undefined ? reservationLabels[id] : id,
-    })
+ const seatCommonProps = (id: string) => ({
+    activeSeatId,
+    setActiveSeatId,
+    onStart: handleStart,
+    onLeave: handleLeave,
+    status: seatStatuses[id] ?? "empty",
+    onSeatClick: handleReserveSeatClick,
+    isReserveSelected: selectedReserveSeats.includes(id),
+    isEatingSelected: selectedEatingSeats.includes(id),
+    onEatingSeatClick: handleEatingSeatClick,
+    onOpenSeatMenu: handleOpenSeatMenu,
+    onStartEatingSeats: handleStartEatingSeats,
+    displayLabel:
+      eatingLabels[id] !== undefined
+        ? eatingLabels[id]
+        : reservationLabels[id] !== undefined
+        ? reservationLabels[id]
+        : id,
+  })
 
     const seatLayout: { [key: string]: { top: number; left: number; width: number; height: number } } = {
       k1: { top: 161, left: 784, width: 60, height: 60 },
@@ -603,6 +725,26 @@ function App() {
         </div>
       )}
       
+      {activeSeatId &&
+      selectedEatingSeats.length > 1 &&
+      getSeatGroup(selectedEatingSeats[0]) === "table" && (
+        <div className="map-calculator">
+          <div className="calculator-title">着席席番号</div>
+
+          <select
+            value={eatingDisplayNumber}
+            onChange={(e) => setEatingDisplayNumber(e.target.value)}
+            className="reserve-seat-number-select"
+          >
+            <option value="">席番号選択</option>
+            {tableSeats.map((seatId) => (
+              <option key={seatId} value={seatId}>
+                {seatId}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div
         style={{
