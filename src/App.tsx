@@ -525,43 +525,66 @@ function App() {
   })
 }, [seatStatuses, mergedReserveGroups])
 
+ useEffect(() => {
+  const timer = window.setInterval(() => {
+    const now = new Date()
+
+    Object.entries(seatTimes).forEach(([id, startTime]) => {
+      const notificationSeatId = getNotificationSeatId(id)
+
+      // グループ席の場合、代表席以外からは通知を作らない
+      if (notificationSeatId !== id) return
+
+      const diff = Math.floor(
+        (now.getTime() - startTime.getTime()) / 1000 / 60
+      )
+
+      const donabeKey = `${notificationSeatId}-donabe`
+      const foodKey = `${notificationSeatId}-food`
+
+      if (diff >= 60 && !firedRef.current[donabeKey]) {
+        firedRef.current[donabeKey] = true
+
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: donabeKey,
+            seatId: notificationSeatId,
+            type: "donabe",
+            text: `${notificationSeatId} 土鍋`,
+          },
+        ])
+      }
+
+      if (diff >= 90 && !firedRef.current[foodKey]) {
+        firedRef.current[foodKey] = true
+
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: foodKey,
+            seatId: notificationSeatId,
+            type: "food",
+            text: `${notificationSeatId} フード`,
+          },
+        ])
+      }
+    })
+  }, 1000)
+
+  return () => {
+    clearInterval(timer)
+  }
+}, [seatTimes, eatingGroups])
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date()
-
-      Object.entries(seatTimes).forEach(([id, startTime]) => {
-        const diff = (now.getTime() - startTime.getTime()) / 60000
-
-        const donabeKey = `${id}-donabe`
-        const foodKey = `${id}-food`
-
-        if (diff >= 1 && !firedRef.current[donabeKey]) {
-          firedRef.current[donabeKey] = true
-          setNotifications((prev) => [
-            ...prev,
-            { id: donabeKey, text: `土鍋 ${id}` },
-          ])
-        }
-
-        if (diff >= 2 && !firedRef.current[foodKey]) {
-          firedRef.current[foodKey] = true
-          setNotifications((prev) => [
-            ...prev,
-            { id: foodKey, text: `フード ${id}` },
-          ])
-        }
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [seatTimes])
-
-  useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       const now = new Date()
 
       Object.entries(reservationTimes).forEach(([id, reserveTime]) => {
-        const diff = (reserveTime.getTime() - now.getTime()) / 60000
+        const diff = Math.floor(
+          (reserveTime.getTime() - now.getTime()) / 1000 / 60
+        )
 
         setSeatStatuses((prev) => {
           if (
@@ -585,7 +608,9 @@ function App() {
       })
     }, 1000)
 
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+    }
   }, [reservationTimes])
 
   const handleNotificationClick = (text: string, notificationId: string) => {
@@ -724,6 +749,13 @@ function App() {
 
       const getEatingGroupBySeatId = (seatId: string) => {
         return eatingGroups.find((group) => group.seats.includes(seatId))
+      }
+      const getNotificationSeatId = (seatId: string) => {
+        const group = getEatingGroupBySeatId(seatId)
+
+        if (!group) return seatId
+
+        return group.representativeSeatId
       }
 
   return (
