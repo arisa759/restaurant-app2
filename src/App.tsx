@@ -445,6 +445,7 @@ function App() {
       onLeave: handleLeave,
       status: seatStatuses[id] ?? "empty",
       onSeatClick: handleReserveSeatClick,
+      isReserveSelected: selectedReserveSeats.includes(id),
       displayLabel:
         reservationLabels[id] !== undefined ? reservationLabels[id] : id,
     })

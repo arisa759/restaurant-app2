@@ -37,6 +37,7 @@ function Seat({
   status = "empty",
   onSeatClick,
   displayLabel,
+  isReserveSelected = false,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
   const [startTime, setStartTime] = useState<Date | null>(null)
@@ -122,7 +123,7 @@ function Seat({
 
   const textColor =
   status === "reserved30m" || status === "reserved1h" ? "white" : "black"
-  const displayColor = seatColor
+  const displayColor = isReserveSelected ? "yellow" : seatColor
 
   return (
 
