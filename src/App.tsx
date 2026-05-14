@@ -4,6 +4,8 @@ import Seat from "./Seat"
 
 type Notification = {
   id: string
+  seatId: string
+  type: "donabe" | "food"
   text: string
 }
 
@@ -542,21 +544,21 @@ function App() {
       const donabeKey = `${notificationSeatId}-donabe`
       const foodKey = `${notificationSeatId}-food`
 
-      if (diff >= 1 && !firedRef.current[donabeKey]) {
+      if (diff >= 60 && !firedRef.current[donabeKey]) {
         firedRef.current[donabeKey] = true
 
-        setNotifications((prev) => [
-          ...prev,
-          {
-            id: donabeKey,
-            seatId: notificationSeatId,
-            type: "donabe",
-            text: `${notificationSeatId} 土鍋`,
-          },
-        ])
+      setNotifications((prev) => [
+        ...prev,
+        {
+          id: donabeKey,
+          seatId: notificationSeatId,
+          type: "donabe",
+          text: `土鍋 ${notificationSeatId}`,
+        },
+      ])
       }
 
-      if (diff >= 2 && !firedRef.current[foodKey]) {
+      if (diff >= 90 && !firedRef.current[foodKey]) {
         firedRef.current[foodKey] = true
 
         setNotifications((prev) => [
@@ -565,7 +567,7 @@ function App() {
             id: foodKey,
             seatId: notificationSeatId,
             type: "food",
-            text: `${notificationSeatId} フード`,
+            text: `フード ${notificationSeatId}`,
           },
         ])
       }
@@ -613,53 +615,82 @@ function App() {
     }
   }, [reservationTimes])
 
-  const handleNotificationClick = (text: string, notificationId: string) => {
-    const [type, seatId] = text.split(" ")
+  const handleNotificationClick = (notification: Notification) => {
+    const targetSeatIds = getSameEatingSeatIds(notification.seatId)
 
-    if (type === "フード") {
+    if (notification.type === "food") {
       const hasDonabeNotification = notifications.some(
-        (n) => n.text === `土鍋 ${seatId}`
+        (n) =>
+          n.type === "donabe" &&
+          targetSeatIds.includes(n.seatId)
       )
 
       if (hasDonabeNotification) {
-        setConfirmFoodCheck({ seatId, notificationId })
+        setConfirmFoodCheck({
+          seatId: notification.seatId,
+          notificationId: notification.id,
+        })
         return
       }
 
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "food",
-      }))
+      setSeatStatuses((prev) => {
+        const next = { ...prev }
 
-      setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
+        targetSeatIds.forEach((seatId) => {
+          next[seatId] = "food"
+        })
+
+        return next
+      })
+
+      setNotifications((prev) =>
+        prev.filter((n) => n.id !== notification.id)
+      )
+
       return
     }
 
-    if (type === "土鍋") {
+    if (notification.type === "donabe") {
       setSeatStatuses((prev) => {
-        if (prev[seatId] === "food") return prev
-        return { ...prev, [seatId]: "donabe" }
+        const next = { ...prev }
+
+        targetSeatIds.forEach((seatId) => {
+          if (next[seatId] !== "food") {
+            next[seatId] = "donabe"
+          }
+        })
+
+        return next
       })
 
-      setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
+      setNotifications((prev) =>
+        prev.filter((n) => n.id !== notification.id)
+      )
     }
   }
-
   const handleConfirmYes = () => {
     if (!confirmFoodCheck) return
 
     const { seatId, notificationId } = confirmFoodCheck
+    const targetSeatIds = getSameEatingSeatIds(seatId)
 
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [seatId]: "food",
-    }))
+    setSeatStatuses((prev) => {
+      const next = { ...prev }
+
+      targetSeatIds.forEach((id) => {
+        next[id] = "food"
+      })
+
+      return next
+    })
 
     setNotifications((prev) =>
       prev.filter((n) => {
         const isClickedFood = n.id === notificationId
-        const isSameSeatDonabe = n.text === `土鍋 ${seatId}`
-        return !isClickedFood && !isSameSeatDonabe
+        const isSameGroupDonabe =
+          n.type === "donabe" && targetSeatIds.includes(n.seatId)
+
+        return !isClickedFood && !isSameGroupDonabe
       })
     )
 
@@ -750,6 +781,13 @@ function App() {
       const getEatingGroupBySeatId = (seatId: string) => {
         return eatingGroups.find((group) => group.seats.includes(seatId))
       }
+      const getSameEatingSeatIds = (seatId: string) => {
+        const group = getEatingGroupBySeatId(seatId)
+
+        if (!group) return [seatId]
+
+        return group.seats
+      }
       const getNotificationSeatId = (seatId: string) => {
         const group = getEatingGroupBySeatId(seatId)
 
@@ -784,7 +822,7 @@ function App() {
               className={`notification-item ${
                 index === notifications.length - 1 ? "enter" : ""
               }`}
-              onClick={() => handleNotificationClick(n.text, n.id)}
+              onClick={() => handleNotificationClick(n)}
             >
               {n.text}
             </div>
