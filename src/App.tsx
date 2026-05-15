@@ -46,12 +46,14 @@ function App() {
   }
 
   const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
+  const [confirmLeaveGroup, setConfirmLeaveGroup] = useState<string | null>(null)
   const [reservationMode, setReservationMode] = useState(false)
   const [selectedReserveSeats, setSelectedReserveSeats] = useState<string[]>([])
   const [reserveTimeText, setReserveTimeText] = useState("")
   const [reserveDisplayNumber, setReserveDisplayNumber] = useState("")
   const [mergedReserveGroups, setMergedReserveGroups] = useState<MergedReserveGroup[]>([])
   const [reservationLabels, setReservationLabels] = useState<{ [key: string]: string }>({})
+  const [confirmLeaveSeatId, setConfirmLeaveSeatId] = useState<string | null>(null)
   const reservationTimeOptions = Array.from({ length: 61 }, (_, i) => {
   const totalMinutes = 17 * 60 + i * 5
   const hour = Math.floor(totalMinutes / 60)
@@ -151,56 +153,15 @@ function App() {
 
 
 
-  const handleStart = (id: string, time: Date) => {
-    const currentStatus = seatStatuses[id]
-
-    if (
-      currentStatus === "occupied" ||
-      currentStatus === "donabe" ||
-      currentStatus === "food"
-    ) {
-      alert("お食事中です。")
-      return
-    }
-
-    setSeatTimes((prev) => ({
-      ...prev,
-      [id]: time,
-    }))
-
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [id]: "occupied",
-    }))
+  const handleLeave = (id: string) => {
+    setConfirmLeaveSeatId(id)
   }
 
-  const handleLeave = (id: string) => {
+  const executeLeave = (id: string) => {
     const group = getEatingGroupBySeatId(id)
 
-    // グループ席ではない場合：通常退店
-    if (!group) {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [id]: "empty",
-      }))
-
-      setSeatTimes((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
-
-      setEatingLabels((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
-
-      return
-    }
-
-    // 代表席を退店した場合：グループ全体を退店
-    if (id === group.representativeSeatId) {
+    // グループ席の場合
+    if (group && id === group.representativeSeatId) {
       group.seats.forEach((seatId) => {
         setSeatStatuses((prev) => ({
           ...prev,
@@ -212,6 +173,9 @@ function App() {
           delete next[seatId]
           return next
         })
+
+        firedRef.current[`${seatId}-donabe`] = false
+        firedRef.current[`${seatId}-food`] = false
       })
 
       setEatingLabels((prev) => {
@@ -226,39 +190,104 @@ function App() {
 
       setEatingGroups((prev) => prev.filter((g) => g !== group))
 
+      setNotifications((prev) =>
+        prev.filter((n) => !group.seats.includes(n.seatId))
+      )
+
+      setConfirmLeaveSeatId(null)
       return
     }
 
-    // 代表席ではない席を退店しようとした場合
-    const otherSeats = group.seats.filter((seatId) => seatId !== id)
-
-    const message = `${otherSeats.join("席、")}席のお客様は退店していませんが、退店しますか`
-
-    const ok = window.confirm(message)
-
-    if (!ok) return
-
-    // はい：この席だけグループから外して、元の席番号を表示
-    setEatingGroups((prev) =>
-      prev.map((g) => {
-        if (g !== group) return g
-
-        return {
-          ...g,
-          seats: g.seats.filter((seatId) => seatId !== id),
-        }
-      })
-    )
-
-    setEatingLabels((prev) => ({
-      ...prev,
-      [id]: id,
-    }))
-
+    // 単独席の場合
     setSeatStatuses((prev) => ({
       ...prev,
       [id]: "empty",
     }))
+
+    setSeatTimes((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+
+    firedRef.current[`${id}-donabe`] = false
+    firedRef.current[`${id}-food`] = false
+
+    setNotifications((prev) =>
+      prev.filter((n) => n.seatId !== id)
+    )
+
+    setConfirmLeaveSeatId(null)
+  }
+
+  const handleConfirmLeaveYes = () => {
+    if (!confirmLeaveSeatId) return
+    executeLeave(confirmLeaveSeatId)
+  }
+
+  const handleConfirmLeaveNo = () => {
+    setConfirmLeaveSeatId(null)
+  }
+
+  const executeGroupLeave = (representativeSeatId: string) => {
+    const group = getEatingGroupBySeatId(representativeSeatId)
+    if (!group) return
+
+    group.seats.forEach((seatId) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [seatId]: "empty",
+      }))
+
+      setSeatTimes((prev) => {
+        const next = { ...prev }
+        delete next[seatId]
+        return next
+      })
+    })
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+
+      group.seats.forEach((seatId) => {
+        delete next[seatId]
+      })
+
+      return next
+    })
+
+    setEatingGroups((prev) => prev.filter((g) => g !== group))
+
+    group.seats.forEach((seatId) => {
+      firedRef.current[`${seatId}-donabe`] = false
+      firedRef.current[`${seatId}-food`] = false
+    })
+
+    setNotifications((prev) =>
+      prev.filter(
+        (n) =>
+          !group.seats.some(
+            (seatId) => n.seatId === seatId || n.text.includes(seatId)
+          )
+      )
+    )
+
+    setConfirmLeaveGroup(null)
+  }
+
+  const handleConfirmLeaveYes = () => {
+    if (!confirmLeaveGroup) return
+    executeGroupLeave(confirmLeaveGroup)
+  }
+
+  const handleConfirmLeaveNo = () => {
+    setConfirmLeaveGroup(null)
   }
 
   const getSeatGroup = (id: string) => {
@@ -842,6 +871,42 @@ function App() {
             </button>
 
             <button className="confirm-button" onClick={handleConfirmNo}>
+              いいえ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmLeaveSeatId && (
+        <div className="confirm-overlay">
+          <div className="confirm-menu">
+            <div className="confirm-message">
+              お会計は済みましたか
+            </div>
+
+            <button className="confirm-button" onClick={handleConfirmLeaveYes}>
+              はい
+            </button>
+
+            <button className="confirm-button" onClick={handleConfirmLeaveNo}>
+              いいえ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmLeaveGroup && (
+        <div className="confirm-overlay">
+          <div className="confirm-menu">
+            <div className="confirm-message">
+              お会計は済みましたか
+            </div>
+
+            <button className="confirm-button" onClick={handleConfirmLeaveYes}>
+              はい
+            </button>
+
+            <button className="confirm-button" onClick={handleConfirmLeaveNo}>
               いいえ
             </button>
           </div>
