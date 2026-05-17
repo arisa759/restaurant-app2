@@ -868,6 +868,7 @@ function App() {
         </div>
 
         <div className="notification-area">
+          {reservationMode && (
           <div className="availability-area">
             {[...availabilityItems]
               .sort((a, b) => a.createdAt - b.createdAt)
@@ -877,6 +878,7 @@ function App() {
                 </div>
               ))}
           </div>
+        )}
 
           {notifications.map((n, index) => (
             <div
