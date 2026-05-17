@@ -30,6 +30,14 @@ type EatingGroup = {
   displayNumber: string
 }
 
+type AvailabilityItem = {
+  id: string
+  text: string
+  createdAt: number
+  seatIds: string[]
+  displayNumber: string
+}
+
 function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeSeatId, setActiveSeatId] = useState<string | null>(null)
@@ -57,6 +65,7 @@ function App() {
   const [eatingDisplayNumber, setEatingDisplayNumber] = useState("")
   const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
   const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
+  const [availabilityItems, setAvailabilityItems] = useState<AvailabilityItem[]>([])
 
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
@@ -129,6 +138,13 @@ function App() {
     })
   }
 
+  const formatHourMinute = (date: Date) => {
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   const getSeatGroup = (id: string) => {
     if (counterSeats.includes(id)) return "counter"
     if (tableSeats.includes(id)) return "table"
@@ -186,17 +202,9 @@ function App() {
 
     const group = getSeatGroup(selectedEatingSeats[0])
 
-    if (group === "counter") {
-      return getRepresentativeSeatId(selectedEatingSeats)
-    }
-
-    if (group === "zashiki") {
-      return getRepresentativeSeatId(selectedEatingSeats)
-    }
-
-    if (group === "table") {
-      return eatingDisplayNumber
-    }
+    if (group === "counter") return getRepresentativeSeatId(selectedEatingSeats)
+    if (group === "zashiki") return getRepresentativeSeatId(selectedEatingSeats)
+    if (group === "table") return eatingDisplayNumber
 
     return selectedEatingSeats[0]
   }
@@ -206,17 +214,9 @@ function App() {
 
     const group = getSeatGroup(selectedReserveSeats[0])
 
-    if (group === "counter") {
-      return getRepresentativeSeatId(selectedReserveSeats)
-    }
-
-    if (group === "zashiki") {
-      return getRepresentativeSeatId(selectedReserveSeats)
-    }
-
-    if (group === "table") {
-      return reserveDisplayNumber
-    }
+    if (group === "counter") return getRepresentativeSeatId(selectedReserveSeats)
+    if (group === "zashiki") return getRepresentativeSeatId(selectedReserveSeats)
+    if (group === "table") return reserveDisplayNumber
 
     return selectedReserveSeats[0]
   }
@@ -239,6 +239,37 @@ function App() {
     }
   }
 
+  const addAvailabilityItem = (
+    seats: string[],
+    displayNumber: string,
+    startTime: Date
+  ) => {
+    const endTime = new Date(startTime)
+    endTime.setHours(endTime.getHours() + 2)
+
+    const seatText =
+      seats.length > 1
+        ? `${displayNumber}（${seats.join("＋")}）`
+        : displayNumber
+
+    setAvailabilityItems((prev) => [
+      ...prev,
+      {
+        id: `${displayNumber}-${startTime.getTime()}`,
+        text: `${seatText} ${formatHourMinute(endTime)}空き予定`,
+        createdAt: startTime.getTime(),
+        seatIds: [...seats],
+        displayNumber,
+      },
+    ])
+  }
+
+  const removeAvailabilityBySeats = (seats: string[]) => {
+    setAvailabilityItems((prev) =>
+      prev.filter((item) => !item.seatIds.some((seatId) => seats.includes(seatId)))
+    )
+  }
+
   const handleOpenSeatMenu = (id: string) => {
     setActiveSeatId(id)
     setSelectedEatingSeats([id])
@@ -253,7 +284,6 @@ function App() {
 
   const handleEatingSeatClick = (id: string) => {
     if (!activeSeatId) return
-
     if (id === activeSeatId) return
 
     const clickedGroup = getSeatGroup(id)
@@ -320,6 +350,8 @@ function App() {
       ...prev,
       [id]: "occupied",
     }))
+
+    addAvailabilityItem([id], id, time)
   }
 
   const handleStartEatingSeats = () => {
@@ -379,6 +411,7 @@ function App() {
       ])
     }
 
+    addAvailabilityItem(selectedEatingSeats, label, now)
     clearEatingSelection()
   }
 
@@ -417,6 +450,7 @@ function App() {
       })
 
       setEatingGroups((prev) => prev.filter((g) => g !== group))
+      removeAvailabilityBySeats(group.seats)
 
       setNotifications((prev) =>
         prev.filter((n) => !group.seats.includes(n.seatId))
@@ -432,6 +466,7 @@ function App() {
       const message = `${otherSeats.join("席、")}席のお客様は退店していませんが、退店しますか`
 
       const ok = window.confirm(message)
+
       if (!ok) {
         setConfirmLeaveSeatId(null)
         return
@@ -442,11 +477,9 @@ function App() {
           .map((g) => {
             if (g !== group) return g
 
-            const remainingSeats = g.seats.filter((seatId) => seatId !== id)
-
             return {
               ...g,
-              seats: remainingSeats,
+              seats: g.seats.filter((seatId) => seatId !== id),
             }
           })
           .filter((g) => g.seats.length > 1)
@@ -472,6 +505,7 @@ function App() {
       firedRef.current[`${id}-donabe`] = false
       firedRef.current[`${id}-food`] = false
 
+      removeAvailabilityBySeats([id])
       setNotifications((prev) => prev.filter((n) => n.seatId !== id))
 
       setConfirmLeaveSeatId(null)
@@ -499,6 +533,7 @@ function App() {
     firedRef.current[`${id}-donabe`] = false
     firedRef.current[`${id}-food`] = false
 
+    removeAvailabilityBySeats([id])
     setNotifications((prev) => prev.filter((n) => n.seatId !== id))
 
     setConfirmLeaveSeatId(null)
@@ -833,6 +868,16 @@ function App() {
         </div>
 
         <div className="notification-area">
+          <div className="availability-area">
+            {[...availabilityItems]
+              .sort((a, b) => a.createdAt - b.createdAt)
+              .map((item) => (
+                <div key={item.id} className="availability-item">
+                  {item.text}
+                </div>
+              ))}
+          </div>
+
           {notifications.map((n, index) => (
             <div
               key={n.id}

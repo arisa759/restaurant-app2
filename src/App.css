@@ -446,3 +446,19 @@
   border: 2px solid black;
   background-color: white;
 }
+
+.availability-area {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-right: 20px;
+  white-space: nowrap;
+}
+
+.availability-item {
+  padding: 6px 10px;
+  border: 1px solid black;
+  background-color: #ffffff;
+  color: black;
+  font-size: 14px;
+}
