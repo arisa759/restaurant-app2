@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 
 type Props = {
   id: string
@@ -7,8 +7,6 @@ type Props = {
   width?: number
   height?: number
   activeSeatId: string | null
-  setActiveSeatId: (id: string | null) => void
-  onStart: (id: string, time: Date) => void
   onSeatClick?: (id: string) => void
   onLeave: (id: string) => void
   isReserveSelected?: boolean
@@ -37,8 +35,6 @@ function Seat({
   width = 60,
   height = 60,
   activeSeatId,
-  setActiveSeatId,
-  onStart,
   onLeave,
   status = "empty",
   onSeatClick,
@@ -52,36 +48,12 @@ function Seat({
   onClearEatingSelection,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
-  const [startTime, setStartTime] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-        setNow(new Date())
-    }, 1000)
 
-    return () => {
-        clearInterval(timer)
-    }
-   }, [])
   const timerRef = useRef<number | null>(null)
   const longPressRef = useRef(false)
 
   const isActive = activeSeatId === id
   const isDimmed = activeSeatId !== null && activeSeatId !== id
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
-  const getElapsedMinutes = () => {
-    if (!startTime) return null
-
-    const diffMs = now.getTime() - startTime.getTime()
-    return Math.floor(diffMs / 1000 / 60)
-  }
 
   const handleTouchStart = () => {
     longPressRef.current = false
@@ -100,20 +72,16 @@ function Seat({
   }
 
   const handleStart = () => {
-    const now = new Date()
-    setStartTime(now)
-    onStart(id, now)   // ←追加
-    setShowMenu(false)
-    setActiveSeatId(null)
-  }
-
-  const handleLeave = () => {
-    onLeave(id)
-    setStartTime(null)
+    onStartEatingSeats?.()
     setShowMenu(false)
     onClearEatingSelection?.()
   }
-
+  const handleLeave = () => {
+    onLeave(id)
+    setShowMenu(false)
+    onClearEatingSelection?.()
+  }
+  
   const handleClose = () => {
     setShowMenu(false)
     onClearEatingSelection?.()

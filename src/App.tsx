@@ -329,31 +329,6 @@ function App() {
     })
   }
 
-  const handleStart = (id: string, time: Date) => {
-    const currentStatus = seatStatuses[id]
-
-    if (
-      currentStatus === "occupied" ||
-      currentStatus === "donabe" ||
-      currentStatus === "food"
-    ) {
-      alert("お食事中です。")
-      return
-    }
-
-    setSeatTimes((prev) => ({
-      ...prev,
-      [id]: time,
-    }))
-
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [id]: "occupied",
-    }))
-
-    addAvailabilityItem([id], id, time)
-  }
-
   const handleStartEatingSeats = () => {
     if (selectedEatingSeats.length === 0) return
 
@@ -870,7 +845,6 @@ function App() {
   const seatCommonProps = (id: string) => ({
     activeSeatId,
     setActiveSeatId,
-    onStart: handleStart,
     onLeave: handleLeave,
     status: seatStatuses[id] ?? "empty",
     onSeatClick: handleReserveSeatClick,
