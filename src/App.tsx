@@ -827,6 +827,46 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
+　const getSeatSubText = (id: string) => {
+    const status = seatStatuses[id]
+
+    if (
+      status === "occupied" ||
+      status === "donabe" ||
+      status === "food"
+    ) {
+      const startTime = seatTimes[id]
+      if (!startTime) return ""
+
+      const diff = Math.floor(
+        (currentTime.getTime() - startTime.getTime()) / 1000 / 60
+      )
+
+      return `${diff}分経過`
+    }
+
+    if (
+      status === "reserved2h" ||
+      status === "reserved1h" ||
+      status === "reserved30m"
+    ) {
+      const reserveTime = reservationTimes[id]
+      if (!reserveTime) return ""
+
+      const diff = Math.ceil(
+        (reserveTime.getTime() - currentTime.getTime()) / 1000 / 60
+      )
+
+      if (diff <= 0) {
+        return "予約時刻"
+      }
+
+      return `あと${diff}分`
+    }
+
+    return ""
+  }
+
   const seatCommonProps = (id: string) => ({
     activeSeatId,
     setActiveSeatId,
@@ -846,6 +886,7 @@ function App() {
         : reservationLabels[id] !== undefined
         ? reservationLabels[id]
         : id,
+    subText: getSeatSubText(id),
   })
 
   return (

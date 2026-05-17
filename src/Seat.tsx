@@ -15,6 +15,7 @@ type Props = {
   isMerged?: boolean
   displayLabel?: string
   isEatingSelected?: boolean
+  subText?: string
   onEatingSeatClick?: (id: string) => void
   onOpenSeatMenu?: (id: string) => void
   onStartEatingSeats?: () => void
@@ -44,6 +45,7 @@ function Seat({
   displayLabel,
   isReserveSelected = false,
   isEatingSelected = false,
+  subText,
   onEatingSeatClick,
   onOpenSeatMenu,
   onStartEatingSeats,
@@ -185,16 +187,12 @@ function Seat({
 
         <div>{displayLabel ?? id}</div>
 
-        {startTime && (
-            <>
-            <div style={{ fontSize: 14 }}>
-                {formatTime(startTime)}
-            </div>
-            <div style={{ fontSize: 14 }}>
-                {getElapsedMinutes()}分
-            </div>
-            </>
+        {subText && (
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            {subText}
+          </div>
         )}
+
         </button>
       {showMenu && (
         <div
