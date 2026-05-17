@@ -657,7 +657,7 @@ function App() {
         const donabeKey = `${targetSeatId}-donabe`
         const foodKey = `${targetSeatId}-food`
 
-        if (diff >= 1 && !firedRef.current[donabeKey]) {
+        if (diff >= 60 && !firedRef.current[donabeKey]) {
           firedRef.current[donabeKey] = true
 
           setNotifications((prev) => [
@@ -671,7 +671,7 @@ function App() {
           ])
         }
 
-        if (diff >= 2 && !firedRef.current[foodKey]) {
+        if (diff >= 90 && !firedRef.current[foodKey]) {
           firedRef.current[foodKey] = true
 
           setNotifications((prev) => [
