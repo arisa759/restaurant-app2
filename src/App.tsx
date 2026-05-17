@@ -18,49 +18,45 @@ type SeatStatus =
   | "reserved1h"
   | "reserved30m"
 
-  type MergedReserveGroup = {
+type MergedReserveGroup = {
   seats: string[]
   reservationSeatNumber: string
   pendingUntilEmpty: boolean
 }
 
+type EatingGroup = {
+  seats: string[]
+  representativeSeatId: string
+  displayNumber: string
+}
+
 function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeSeatId, setActiveSeatId] = useState<string | null>(null)
+
   const [seatTimes, setSeatTimes] = useState<{ [key: string]: Date }>({})
   const [reservationTimes, setReservationTimes] = useState<{ [key: string]: Date }>({})
-  const [notifications, setNotifications] = useState<Notification[]>([])
   const [seatStatuses, setSeatStatuses] = useState<{ [key: string]: SeatStatus }>({})
+
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [confirmFoodCheck, setConfirmFoodCheck] = useState<{
     seatId: string
     notificationId: string
   } | null>(null)
 
-  const [selectedEatingSeats, setSelectedEatingSeats] = useState<string[]>([])
-  const [eatingDisplayNumber, setEatingDisplayNumber] = useState("")
-  const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
-  type EatingGroup = {
-    seats: string[]
-    representativeSeatId: string
-    displayNumber: string
-  }
+  const [confirmLeaveSeatId, setConfirmLeaveSeatId] = useState<string | null>(null)
 
-  const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
-  const [confirmLeaveGroup, setConfirmLeaveGroup] = useState<string | null>(null)
   const [reservationMode, setReservationMode] = useState(false)
   const [selectedReserveSeats, setSelectedReserveSeats] = useState<string[]>([])
   const [reserveTimeText, setReserveTimeText] = useState("")
   const [reserveDisplayNumber, setReserveDisplayNumber] = useState("")
-  const [mergedReserveGroups, setMergedReserveGroups] = useState<MergedReserveGroup[]>([])
   const [reservationLabels, setReservationLabels] = useState<{ [key: string]: string }>({})
-  const [confirmLeaveSeatId, setConfirmLeaveSeatId] = useState<string | null>(null)
-  const reservationTimeOptions = Array.from({ length: 61 }, (_, i) => {
-  const totalMinutes = 17 * 60 + i * 5
-  const hour = Math.floor(totalMinutes / 60)
-  const minute = totalMinutes % 60
+  const [mergedReserveGroups, setMergedReserveGroups] = useState<MergedReserveGroup[]>([])
 
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
-})
+  const [selectedEatingSeats, setSelectedEatingSeats] = useState<string[]>([])
+  const [eatingDisplayNumber, setEatingDisplayNumber] = useState("")
+  const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
+  const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
 
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
@@ -72,8 +68,54 @@ function App() {
   const tableSeats = ["201", "2021", "2022", "2031", "2032", "204"]
   const zashikiSeats = ["301", "302", "303", "304"]
 
+  const reservationTimeOptions = Array.from({ length: 61 }, (_, i) => {
+    const totalMinutes = 17 * 60 + i * 5
+    const hour = Math.floor(totalMinutes / 60)
+    const minute = totalMinutes % 60
+
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+  })
+
+  const seatLayout: {
+    [key: string]: { top: number; left: number; width: number; height: number }
+  } = {
+    k1: { top: 161, left: 784, width: 60, height: 60 },
+    "(k1)": { top: 222, left: 784, width: 60, height: 60 },
+    k2: { top: 284, left: 784, width: 60, height: 60 },
+    k3: { top: 345, left: 784, width: 60, height: 60 },
+    k4: { top: 345, left: 723, width: 60, height: 60 },
+    k5: { top: 345, left: 662, width: 60, height: 60 },
+    k6: { top: 345, left: 600, width: 60, height: 60 },
+    k7: { top: 345, left: 539, width: 60, height: 60 },
+    k8: { top: 345, left: 477, width: 60, height: 60 },
+    k9: { top: 345, left: 416, width: 60, height: 60 },
+    k10: { top: 345, left: 354, width: 60, height: 60 },
+    k11: { top: 345, left: 293, width: 60, height: 60 },
+    k12: { top: 345, left: 232, width: 60, height: 60 },
+    k13: { top: 284, left: 232, width: 60, height: 60 },
+    k14: { top: 222, left: 232, width: 60, height: 60 },
+    k15: { top: 161, left: 232, width: 60, height: 60 },
+    k16: { top: 100, left: 232, width: 60, height: 60 },
+
+    301: { top: 510, left: 50, width: 100, height: 150 },
+    302: { top: 370, left: 50, width: 100, height: 100 },
+    303: { top: 235, left: 50, width: 100, height: 100 },
+    304: { top: 100, left: 50, width: 100, height: 100 },
+
+    201: { top: 55, left: 930, width: 100, height: 150 },
+    2021: { top: 240, left: 930, width: 100, height: 60 },
+    2022: { top: 301, left: 930, width: 100, height: 60 },
+    2031: { top: 390, left: 930, width: 100, height: 60 },
+    2032: { top: 465, left: 930, width: 100, height: 60 },
+    204: { top: 560, left: 930, width: 100, height: 100 },
+
+    205: { top: 520, left: 640, width: 100, height: 100 },
+    206: { top: 520, left: 485, width: 100, height: 100 },
+    207: { top: 520, left: 325, width: 100, height: 100 },
+  }
+
   useEffect(() => {
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
 
@@ -87,10 +129,120 @@ function App() {
     })
   }
 
+  const getSeatGroup = (id: string) => {
+    if (counterSeats.includes(id)) return "counter"
+    if (tableSeats.includes(id)) return "table"
+    if (zashikiSeats.includes(id)) return "zashiki"
+    return "other"
+  }
+
+  const getRepresentativeSeatId = (seats: string[]) => {
+    if (seats.length === 0) return ""
+
+    const group = getSeatGroup(seats[0])
+
+    if (group === "counter") {
+      return [...seats].sort((a, b) => {
+        const numA = Number(a.replace("k", "").replace("(", "").replace(")", ""))
+        const numB = Number(b.replace("k", "").replace("(", "").replace(")", ""))
+        return numA - numB
+      })[0]
+    }
+
+    if (group === "zashiki" || group === "table") {
+      return [...seats].sort((a, b) => Number(a) - Number(b))[0]
+    }
+
+    return seats[0]
+  }
+
+  const getEatingGroupBySeatId = (seatId: string) => {
+    return eatingGroups.find((group) => group.seats.includes(seatId))
+  }
+
+  const getSameEatingSeatIds = (seatId: string) => {
+    const group = getEatingGroupBySeatId(seatId)
+    return group ? group.seats : [seatId]
+  }
+
+  const getNotificationSeatInfo = (seatId: string) => {
+    const group = getEatingGroupBySeatId(seatId)
+
+    if (!group) {
+      return {
+        targetSeatId: seatId,
+        displaySeatId: eatingLabels[seatId] ?? seatId,
+      }
+    }
+
+    return {
+      targetSeatId: group.representativeSeatId,
+      displaySeatId: group.displayNumber,
+    }
+  }
+
+  const getEatingSeatNumber = () => {
+    if (selectedEatingSeats.length === 0) return ""
+
+    const group = getSeatGroup(selectedEatingSeats[0])
+
+    if (group === "counter") {
+      return getRepresentativeSeatId(selectedEatingSeats)
+    }
+
+    if (group === "zashiki") {
+      return getRepresentativeSeatId(selectedEatingSeats)
+    }
+
+    if (group === "table") {
+      return eatingDisplayNumber
+    }
+
+    return selectedEatingSeats[0]
+  }
+
+  const getReservationSeatNumber = () => {
+    if (selectedReserveSeats.length === 0) return ""
+
+    const group = getSeatGroup(selectedReserveSeats[0])
+
+    if (group === "counter") {
+      return getRepresentativeSeatId(selectedReserveSeats)
+    }
+
+    if (group === "zashiki") {
+      return getRepresentativeSeatId(selectedReserveSeats)
+    }
+
+    if (group === "table") {
+      return reserveDisplayNumber
+    }
+
+    return selectedReserveSeats[0]
+  }
+
+  const getMergedBox = (group: string[]) => {
+    const layouts = group.map((id) => seatLayout[id]).filter(Boolean)
+
+    if (layouts.length === 0) return null
+
+    const left = Math.min(...layouts.map((s) => s.left))
+    const top = Math.min(...layouts.map((s) => s.top))
+    const right = Math.max(...layouts.map((s) => s.left + s.width))
+    const bottom = Math.max(...layouts.map((s) => s.top + s.height))
+
+    return {
+      left,
+      top,
+      width: right - left,
+      height: bottom - top,
+    }
+  }
+
   const handleOpenSeatMenu = (id: string) => {
-      setActiveSeatId(id)
-      setSelectedEatingSeats([id])
-      setEatingDisplayNumber("")
+    setActiveSeatId(id)
+    setSelectedEatingSeats([id])
+    setEatingDisplayNumber("")
   }
 
   const clearEatingSelection = () => {
@@ -102,10 +254,7 @@ function App() {
   const handleEatingSeatClick = (id: string) => {
     if (!activeSeatId) return
 
-    // 最初に長押しした席は、タップしても解除しない
-    if (id === activeSeatId) {
-      return
-    }
+    if (id === activeSeatId) return
 
     const clickedGroup = getSeatGroup(id)
 
@@ -125,176 +274,6 @@ function App() {
 
       return [...prev, id]
     })
-  }
-
-  const getEatingSeatNumber = () => {
-    if (selectedEatingSeats.length === 0) return ""
-
-    const group = getSeatGroup(selectedEatingSeats[0])
-
-    if (group === "counter") {
-      return [...selectedEatingSeats].sort((a, b) => {
-        const numA = Number(a.replace("k", "").replace("(", "").replace(")", ""))
-        const numB = Number(b.replace("k", "").replace("(", "").replace(")", ""))
-        return numA - numB
-      })[0]
-    }
-
-    if (group === "zashiki") {
-      return [...selectedEatingSeats].sort((a, b) => Number(a) - Number(b))[0]
-    }
-
-    if (group === "table") {
-      return eatingDisplayNumber
-    }
-
-    return selectedEatingSeats[0]
-  }
-
-
-
-  const handleLeave = (id: string) => {
-    setConfirmLeaveSeatId(id)
-  }
-
-  const executeLeave = (id: string) => {
-    const group = getEatingGroupBySeatId(id)
-
-    // グループ席の場合
-    if (group && id === group.representativeSeatId) {
-      group.seats.forEach((seatId) => {
-        setSeatStatuses((prev) => ({
-          ...prev,
-          [seatId]: "empty",
-        }))
-
-        setSeatTimes((prev) => {
-          const next = { ...prev }
-          delete next[seatId]
-          return next
-        })
-
-        firedRef.current[`${seatId}-donabe`] = false
-        firedRef.current[`${seatId}-food`] = false
-      })
-
-      setEatingLabels((prev) => {
-        const next = { ...prev }
-
-        group.seats.forEach((seatId) => {
-          delete next[seatId]
-        })
-
-        return next
-      })
-
-      setEatingGroups((prev) => prev.filter((g) => g !== group))
-
-      setNotifications((prev) =>
-        prev.filter((n) => !group.seats.includes(n.seatId))
-      )
-
-      setConfirmLeaveSeatId(null)
-      return
-    }
-
-    // 単独席の場合
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [id]: "empty",
-    }))
-
-    setSeatTimes((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-
-    setEatingLabels((prev) => {
-      const next = { ...prev }
-      delete next[id]
-      return next
-    })
-
-    firedRef.current[`${id}-donabe`] = false
-    firedRef.current[`${id}-food`] = false
-
-    setNotifications((prev) =>
-      prev.filter((n) => n.seatId !== id)
-    )
-
-    setConfirmLeaveSeatId(null)
-  }
-
-  const handleConfirmLeaveYes = () => {
-    if (!confirmLeaveSeatId) return
-    executeLeave(confirmLeaveSeatId)
-  }
-
-  const handleConfirmLeaveNo = () => {
-    setConfirmLeaveSeatId(null)
-  }
-
-  const executeGroupLeave = (representativeSeatId: string) => {
-    const group = getEatingGroupBySeatId(representativeSeatId)
-    if (!group) return
-
-    group.seats.forEach((seatId) => {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "empty",
-      }))
-
-      setSeatTimes((prev) => {
-        const next = { ...prev }
-        delete next[seatId]
-        return next
-      })
-    })
-
-    setEatingLabels((prev) => {
-      const next = { ...prev }
-
-      group.seats.forEach((seatId) => {
-        delete next[seatId]
-      })
-
-      return next
-    })
-
-    setEatingGroups((prev) => prev.filter((g) => g !== group))
-
-    group.seats.forEach((seatId) => {
-      firedRef.current[`${seatId}-donabe`] = false
-      firedRef.current[`${seatId}-food`] = false
-    })
-
-    setNotifications((prev) =>
-      prev.filter(
-        (n) =>
-          !group.seats.some(
-            (seatId) => n.seatId === seatId || n.text.includes(seatId)
-          )
-      )
-    )
-
-    setConfirmLeaveGroup(null)
-  }
-
-  const handleConfirmLeaveYes = () => {
-    if (!confirmLeaveGroup) return
-    executeGroupLeave(confirmLeaveGroup)
-  }
-
-  const handleConfirmLeaveNo = () => {
-    setConfirmLeaveGroup(null)
-  }
-
-  const getSeatGroup = (id: string) => {
-    if (counterSeats.includes(id)) return "counter"
-    if (tableSeats.includes(id)) return "table"
-    if (zashikiSeats.includes(id)) return "zashiki"
-    return "other"
   }
 
   const handleReserveSeatClick = (id: string) => {
@@ -318,6 +297,29 @@ function App() {
 
       return [...prev, id]
     })
+  }
+
+  const handleStart = (id: string, time: Date) => {
+    const currentStatus = seatStatuses[id]
+
+    if (
+      currentStatus === "occupied" ||
+      currentStatus === "donabe" ||
+      currentStatus === "food"
+    ) {
+      alert("お食事中です。")
+      return
+    }
+
+    setSeatTimes((prev) => ({
+      ...prev,
+      [id]: time,
+    }))
+
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [id]: "occupied",
+    }))
   }
 
   const handleStartEatingSeats = () => {
@@ -360,72 +362,157 @@ function App() {
       const next = { ...prev }
 
       selectedEatingSeats.forEach((seatId) => {
-        if (seatId === representativeSeatId) {
-          next[seatId] = label
-        } else {
-          next[seatId] = ""
-        }
+        next[seatId] = seatId === representativeSeatId ? label : ""
       })
 
       return next
     })
 
-        if (selectedEatingSeats.length > 1) {
+    if (selectedEatingSeats.length > 1) {
       setEatingGroups((prev) => [
         ...prev,
         {
-          seats: selectedEatingSeats,
+          seats: [...selectedEatingSeats],
           representativeSeatId,
           displayNumber: label,
         },
       ])
     }
 
-    setActiveSeatId(null)
-    setSelectedEatingSeats([])
-    setEatingDisplayNumber("")
+    clearEatingSelection()
   }
 
-  const getRepresentativeSeatId = (seats: string[]) => {
-    if (seats.length === 0) return ""
-
-    const group = getSeatGroup(seats[0])
-
-    if (group === "counter") {
-      return [...seats].sort((a, b) => {
-        const numA = Number(a.replace("k", "").replace("(", "").replace(")", ""))
-        const numB = Number(b.replace("k", "").replace("(", "").replace(")", ""))
-        return numA - numB
-      })[0]
-    }
-
-    if (group === "zashiki" || group === "table") {
-      return [...seats].sort((a, b) => Number(a) - Number(b))[0]
-    }
-
-    return seats[0]
+  const handleLeave = (id: string) => {
+    setConfirmLeaveSeatId(id)
   }
 
-  const getReservationSeatNumber = () => {
-    if (selectedReserveSeats.length === 0) return ""
+  const executeLeave = (id: string) => {
+    const group = getEatingGroupBySeatId(id)
 
-    const group = getSeatGroup(selectedReserveSeats[0])
+    if (group && id === group.representativeSeatId) {
+      group.seats.forEach((seatId) => {
+        setSeatStatuses((prev) => ({
+          ...prev,
+          [seatId]: "empty",
+        }))
 
-    if (group === "counter") {
-      return [...selectedReserveSeats].sort(
-        (a, b) => Number(a.replace("k", "")) - Number(b.replace("k", ""))
-      )[0]
+        setSeatTimes((prev) => {
+          const next = { ...prev }
+          delete next[seatId]
+          return next
+        })
+
+        firedRef.current[`${seatId}-donabe`] = false
+        firedRef.current[`${seatId}-food`] = false
+      })
+
+      setEatingLabels((prev) => {
+        const next = { ...prev }
+
+        group.seats.forEach((seatId) => {
+          delete next[seatId]
+        })
+
+        return next
+      })
+
+      setEatingGroups((prev) => prev.filter((g) => g !== group))
+
+      setNotifications((prev) =>
+        prev.filter((n) => !group.seats.includes(n.seatId))
+      )
+
+      setConfirmLeaveSeatId(null)
+      clearEatingSelection()
+      return
     }
 
-    if (group === "zashiki") {
-      return [...selectedReserveSeats].sort((a, b) => Number(a) - Number(b))[0]
+    if (group && id !== group.representativeSeatId) {
+      const otherSeats = group.seats.filter((seatId) => seatId !== id)
+      const message = `${otherSeats.join("席、")}席のお客様は退店していませんが、退店しますか`
+
+      const ok = window.confirm(message)
+      if (!ok) {
+        setConfirmLeaveSeatId(null)
+        return
+      }
+
+      setEatingGroups((prev) =>
+        prev
+          .map((g) => {
+            if (g !== group) return g
+
+            const remainingSeats = g.seats.filter((seatId) => seatId !== id)
+
+            return {
+              ...g,
+              seats: remainingSeats,
+            }
+          })
+          .filter((g) => g.seats.length > 1)
+      )
+
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [id]: "empty",
+      }))
+
+      setSeatTimes((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+
+      setEatingLabels((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+
+      firedRef.current[`${id}-donabe`] = false
+      firedRef.current[`${id}-food`] = false
+
+      setNotifications((prev) => prev.filter((n) => n.seatId !== id))
+
+      setConfirmLeaveSeatId(null)
+      clearEatingSelection()
+      return
     }
 
-    if (group === "table") {
-      return reserveDisplayNumber
-    }
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [id]: "empty",
+    }))
 
-    return selectedReserveSeats[0]
+    setSeatTimes((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+
+    firedRef.current[`${id}-donabe`] = false
+    firedRef.current[`${id}-food`] = false
+
+    setNotifications((prev) => prev.filter((n) => n.seatId !== id))
+
+    setConfirmLeaveSeatId(null)
+    clearEatingSelection()
+  }
+
+  const handleConfirmLeaveYes = () => {
+    if (!confirmLeaveSeatId) return
+    executeLeave(confirmLeaveSeatId)
+  }
+
+  const handleConfirmLeaveNo = () => {
+    setConfirmLeaveSeatId(null)
+    clearEatingSelection()
   }
 
   const handleConfirmReservation = () => {
@@ -486,7 +573,7 @@ function App() {
       setMergedReserveGroups((prev) => [
         ...prev,
         {
-          seats: selectedReserveSeats,
+          seats: [...selectedReserveSeats],
           reservationSeatNumber,
           pendingUntilEmpty: true,
         },
@@ -498,11 +585,7 @@ function App() {
         const next = { ...prev }
 
         selectedReserveSeats.forEach((seatId) => {
-          if (seatId === representativeSeatId) {
-            next[seatId] = reservationSeatNumber
-          } else {
-            next[seatId] = ""
-          }
+          next[seatId] = seatId === representativeSeatId ? reservationSeatNumber : ""
         })
 
         return next
@@ -518,104 +601,91 @@ function App() {
   }
 
   useEffect(() => {
-  mergedReserveGroups.forEach((group) => {
-    if (!group.pendingUntilEmpty) return
+    mergedReserveGroups.forEach((group) => {
+      if (!group.pendingUntilEmpty) return
 
-    const stillEating = group.seats.some((seatId) =>
-      ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
-    )
-
-    if (stillEating) return
-
-    const representativeSeatId = getRepresentativeSeatId(group.seats)
-
-    group.seats.forEach((seatId) => {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "reserved2h",
-      }))
-    })
-
-    setReservationLabels((prev) => {
-      const next = { ...prev }
-
-      group.seats.forEach((seatId) => {
-        if (seatId === representativeSeatId) {
-          next[seatId] = group.reservationSeatNumber
-        } else {
-          next[seatId] = ""
-        }
-      })
-
-      return next
-    })
-
-    setMergedReserveGroups((prev) =>
-      prev.filter((g) => g !== group)
-    )
-  })
-}, [seatStatuses, mergedReserveGroups])
-
- useEffect(() => {
-  const timer = window.setInterval(() => {
-    const now = new Date()
-
-    Object.entries(seatTimes).forEach(([id, startTime]) => {
-      const notificationSeatId = getNotificationSeatId(id)
-
-      // グループ席の場合、代表席以外からは通知を作らない
-      if (notificationSeatId !== id) return
-
-      const diff = Math.floor(
-        (now.getTime() - startTime.getTime()) / 1000 / 60
+      const stillEating = group.seats.some((seatId) =>
+        ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
       )
 
-      const donabeKey = `${notificationSeatId}-donabe`
-      const foodKey = `${notificationSeatId}-food`
+      if (stillEating) return
 
-      if (diff >= 1 && !firedRef.current[donabeKey]) {
-        firedRef.current[donabeKey] = true
+      const representativeSeatId = getRepresentativeSeatId(group.seats)
 
-      setNotifications((prev) => [
-        ...prev,
-        {
-          id: donabeKey,
-          seatId: notificationSeatId,
-          type: "donabe",
-          text: `土鍋 ${notificationSeatId}`,
-        },
-      ])
-      }
-
-      if (diff >= 2 && !firedRef.current[foodKey]) {
-        firedRef.current[foodKey] = true
-
-        setNotifications((prev) => [
+      group.seats.forEach((seatId) => {
+        setSeatStatuses((prev) => ({
           ...prev,
-          {
-            id: foodKey,
-            seatId: notificationSeatId,
-            type: "food",
-            text: `フード ${notificationSeatId}`,
-          },
-        ])
-      }
-    })
-  }, 1000)
+          [seatId]: "reserved2h",
+        }))
+      })
 
-  return () => {
-    clearInterval(timer)
-  }
-}, [seatTimes, eatingGroups])
+      setReservationLabels((prev) => {
+        const next = { ...prev }
+
+        group.seats.forEach((seatId) => {
+          next[seatId] = seatId === representativeSeatId ? group.reservationSeatNumber : ""
+        })
+
+        return next
+      })
+
+      setMergedReserveGroups((prev) => prev.filter((g) => g !== group))
+    })
+  }, [seatStatuses, mergedReserveGroups])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const now = new Date()
+
+      Object.entries(seatTimes).forEach(([id, startTime]) => {
+        const { targetSeatId, displaySeatId } = getNotificationSeatInfo(id)
+
+        if (targetSeatId !== id) return
+
+        const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000 / 60)
+
+        const donabeKey = `${targetSeatId}-donabe`
+        const foodKey = `${targetSeatId}-food`
+
+        if (diff >= 1 && !firedRef.current[donabeKey]) {
+          firedRef.current[donabeKey] = true
+
+          setNotifications((prev) => [
+            ...prev,
+            {
+              id: donabeKey,
+              seatId: targetSeatId,
+              type: "donabe",
+              text: `土鍋 ${displaySeatId}`,
+            },
+          ])
+        }
+
+        if (diff >= 2 && !firedRef.current[foodKey]) {
+          firedRef.current[foodKey] = true
+
+          setNotifications((prev) => [
+            ...prev,
+            {
+              id: foodKey,
+              seatId: targetSeatId,
+              type: "food",
+              text: `フード ${displaySeatId}`,
+            },
+          ])
+        }
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [seatTimes, eatingGroups, eatingLabels])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       const now = new Date()
 
       Object.entries(reservationTimes).forEach(([id, reserveTime]) => {
-        const diff = Math.floor(
-          (reserveTime.getTime() - now.getTime()) / 1000 / 60
-        )
+        const diff = Math.floor((reserveTime.getTime() - now.getTime()) / 1000 / 60)
 
         setSeatStatuses((prev) => {
           if (
@@ -639,9 +709,7 @@ function App() {
       })
     }, 1000)
 
-    return () => {
-      clearInterval(timer)
-    }
+    return () => clearInterval(timer)
   }, [reservationTimes])
 
   const handleNotificationClick = (notification: Notification) => {
@@ -649,9 +717,7 @@ function App() {
 
     if (notification.type === "food") {
       const hasDonabeNotification = notifications.some(
-        (n) =>
-          n.type === "donabe" &&
-          targetSeatIds.includes(n.seatId)
+        (n) => n.type === "donabe" && targetSeatIds.includes(n.seatId)
       )
 
       if (hasDonabeNotification) {
@@ -672,10 +738,7 @@ function App() {
         return next
       })
 
-      setNotifications((prev) =>
-        prev.filter((n) => n.id !== notification.id)
-      )
-
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
       return
     }
 
@@ -692,11 +755,10 @@ function App() {
         return next
       })
 
-      setNotifications((prev) =>
-        prev.filter((n) => n.id !== notification.id)
-      )
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id))
     }
   }
+
   const handleConfirmYes = () => {
     if (!confirmFoodCheck) return
 
@@ -730,7 +792,7 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
- const seatCommonProps = (id: string) => ({
+  const seatCommonProps = (id: string) => ({
     activeSeatId,
     setActiveSeatId,
     onStart: handleStart,
@@ -750,80 +812,6 @@ function App() {
         ? reservationLabels[id]
         : id,
   })
-
-    const seatLayout: { [key: string]: { top: number; left: number; width: number; height: number } } = {
-      k1: { top: 161, left: 784, width: 60, height: 60 },
-      "(k1)": { top: 222, left: 784, width: 60, height: 60 },
-      k2: { top: 284, left: 784, width: 60, height: 60 },
-      k3: { top: 345, left: 784, width: 60, height: 60 },
-      k4: { top: 345, left: 723, width: 60, height: 60 },
-      k5: { top: 345, left: 662, width: 60, height: 60 },
-      k6: { top: 345, left: 600, width: 60, height: 60 },
-      k7: { top: 345, left: 539, width: 60, height: 60 },
-      k8: { top: 345, left: 477, width: 60, height: 60 },
-      k9: { top: 345, left: 416, width: 60, height: 60 },
-      k10: { top: 345, left: 354, width: 60, height: 60 },
-      k11: { top: 345, left: 293, width: 60, height: 60 },
-      k12: { top: 345, left: 232, width: 60, height: 60 },
-      k13: { top: 284, left: 232, width: 60, height: 60 },
-      k14: { top: 222, left: 232, width: 60, height: 60 },
-      k15: { top: 161, left: 232, width: 60, height: 60 },
-      k16: { top: 100, left: 232, width: 60, height: 60 },
-
-      301: { top: 510, left: 50, width: 100, height: 150 },
-      302: { top: 370, left: 50, width: 100, height: 100 },
-      303: { top: 235, left: 50, width: 100, height: 100 },
-      304: { top: 100, left: 50, width: 100, height: 100 },
-
-      201: { top: 55, left: 930, width: 100, height: 150 },
-      2021: { top: 240, left: 930, width: 100, height: 60 },
-      2022: { top: 301, left: 930, width: 100, height: 60 },
-      2031: { top: 390, left: 930, width: 100, height: 60 },
-      2032: { top: 465, left: 930, width: 100, height: 60 },
-      204: { top: 560, left: 930, width: 100, height: 100 },
-
-      205: { top: 520, left: 640, width: 100, height: 100 },
-      206: { top: 520, left: 485, width: 100, height: 100 },
-      207: { top: 520, left: 325, width: 100, height: 100 },
-    }
-
-    const getMergedBox = (group: string[]) => {
-      const layouts = group
-        .map((id) => seatLayout[id])
-        .filter(Boolean)
-
-      if (layouts.length === 0) return null
-
-      const left = Math.min(...layouts.map((s) => s.left))
-      const top = Math.min(...layouts.map((s) => s.top))
-      const right = Math.max(...layouts.map((s) => s.left + s.width))
-      const bottom = Math.max(...layouts.map((s) => s.top + s.height))
-
-      return {
-        left,
-        top,
-        width: right - left,
-        height: bottom - top,
-      }
-    }
-
-      const getEatingGroupBySeatId = (seatId: string) => {
-        return eatingGroups.find((group) => group.seats.includes(seatId))
-      }
-      const getSameEatingSeatIds = (seatId: string) => {
-        const group = getEatingGroupBySeatId(seatId)
-
-        if (!group) return [seatId]
-
-        return group.seats
-      }
-      const getNotificationSeatId = (seatId: string) => {
-        const group = getEatingGroupBySeatId(seatId)
-
-        if (!group) return seatId
-
-        return group.representativeSeatId
-      }
 
   return (
     <div>
@@ -895,52 +883,34 @@ function App() {
         </div>
       )}
 
-      {confirmLeaveGroup && (
-        <div className="confirm-overlay">
-          <div className="confirm-menu">
-            <div className="confirm-message">
-              お会計は済みましたか
-            </div>
-
-            <button className="confirm-button" onClick={handleConfirmLeaveYes}>
-              はい
-            </button>
-
-            <button className="confirm-button" onClick={handleConfirmLeaveNo}>
-              いいえ
-            </button>
-          </div>
-        </div>
-      )}
-
       {reservationMode && (
         <div className="reservation-panel">
-         <div>
-          選択中：
-          {selectedReserveSeats.length > 0
-            ? selectedReserveSeats.join(" + ")
-            : "なし"}
-          {"　"}
-          予定席番号：
-          {selectedReserveSeats.length > 0
-            ? getReservationSeatNumber() || "未設定"
-            : "なし"}
-        </div>
+          <div>
+            選択中：
+            {selectedReserveSeats.length > 0
+              ? selectedReserveSeats.join(" + ")
+              : "なし"}
+            {"　"}
+            予定席番号：
+            {selectedReserveSeats.length > 0
+              ? getReservationSeatNumber() || "未設定"
+              : "なし"}
+          </div>
 
           <div>
             予約時間：
-          <select
-            value={reserveTimeText}
-            onChange={(e) => setReserveTimeText(e.target.value)}
-            className="reserve-time-select"
-          >
-            <option value="">時間選択</option>
-            {reservationTimeOptions.map((time) => (
-              <option key={time} value={time}>
-                {time}
-              </option>
-            ))}
-          </select>
+            <select
+              value={reserveTimeText}
+              onChange={(e) => setReserveTimeText(e.target.value)}
+              className="reserve-time-select"
+            >
+              <option value="">時間選択</option>
+              {reservationTimeOptions.map((time) => (
+                <option key={time} value={time}>
+                  {time}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button onClick={handleConfirmReservation}>予約確定</button>
@@ -957,27 +927,6 @@ function App() {
           </button>
         </div>
       )}
-      
-      {activeSeatId &&
-      selectedEatingSeats.length > 1 &&
-      getSeatGroup(selectedEatingSeats[0]) === "table" && (
-        <div className="map-calculator">
-          <div className="calculator-title">着席席番号</div>
-
-          <select
-            value={eatingDisplayNumber}
-            onChange={(e) => setEatingDisplayNumber(e.target.value)}
-            className="reserve-seat-number-select"
-          >
-            <option value="">席番号選択</option>
-            {tableSeats.map((seatId) => (
-              <option key={seatId} value={seatId}>
-                {seatId}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <div
         style={{
@@ -988,8 +937,7 @@ function App() {
           backgroundColor: "#f7f7f7",
         }}
       >
-
-      {mergedReserveGroups.map((group, index) => {
+        {mergedReserveGroups.map((group, index) => {
           const stillEating = group.seats.some((seatId) =>
             ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
           )
@@ -1017,26 +965,47 @@ function App() {
           )
         })}
 
-        {reservationMode &&
-        selectedReserveSeats.length > 0 &&
-        getSeatGroup(selectedReserveSeats[0]) === "table" && (
-          <div className="map-calculator">
-            <div className="calculator-title">予約席番号</div>
+        {activeSeatId &&
+          selectedEatingSeats.length > 1 &&
+          getSeatGroup(selectedEatingSeats[0]) === "table" && (
+            <div className="map-calculator">
+              <div className="calculator-title">着席席番号</div>
 
-          <select
-            value={reserveDisplayNumber}
-            onChange={(e) => setReserveDisplayNumber(e.target.value)}
-            className="reserve-seat-number-select"
-          >
-            <option value="">席番号選択</option>
-            {tableSeats.map((seatId) => (
-              <option key={seatId} value={seatId}>
-                {seatId}
-              </option>
-            ))}
-          </select>
-          </div>
-        )}
+              <select
+                value={eatingDisplayNumber}
+                onChange={(e) => setEatingDisplayNumber(e.target.value)}
+                className="reserve-seat-number-select"
+              >
+                <option value="">席番号選択</option>
+                {tableSeats.map((seatId) => (
+                  <option key={seatId} value={seatId}>
+                    {seatId}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+        {reservationMode &&
+          selectedReserveSeats.length > 0 &&
+          getSeatGroup(selectedReserveSeats[0]) === "table" && (
+            <div className="map-calculator">
+              <div className="calculator-title">予約席番号</div>
+
+              <select
+                value={reserveDisplayNumber}
+                onChange={(e) => setReserveDisplayNumber(e.target.value)}
+                className="reserve-seat-number-select"
+              >
+                <option value="">席番号選択</option>
+                {tableSeats.map((seatId) => (
+                  <option key={seatId} value={seatId}>
+                    {seatId}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
         <Seat id="k1" top={161} left={784} {...seatCommonProps("k1")} />
         <Seat id="(k1)" top={222} left={784} {...seatCommonProps("(k1)")} />
