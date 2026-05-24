@@ -23,6 +23,9 @@ type Props = {
   onStartReservedSeat?: () => void
   onCancelReservation?: () => void
   onOverrideReservation?: () => void
+  seatMoveMode?: boolean
+  onMoveSeatTarget?: () => void
+  onStartSeatMove?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -56,6 +59,9 @@ function Seat({
   onStartReservedSeat,
   onCancelReservation,
   onOverrideReservation,
+  seatMoveMode = false,
+  onMoveSeatTarget,
+  onStartSeatMove,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
 
@@ -128,6 +134,11 @@ function Seat({
         onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => e.preventDefault()}
        onClick={() => {
+          if (seatMoveMode) {
+            onMoveSeatTarget?.()
+            return
+          }
+
           if (activeSeatId) {
             onEatingSeatClick?.(id)
             return
@@ -217,7 +228,8 @@ function Seat({
 
                   <button
                     onClick={() => {
-                      alert("席移動は次の段階で実装します")
+                      onStartSeatMove?.()
+                      setShowMenu(false)
                     }}
                   >
                     席移動

@@ -93,6 +93,8 @@ function App() {
       displaySeatNumber: string
     }[]
   >([])
+  const [seatMoveMode, setSeatMoveMode] = useState(false)
+  const [movingSeatIds, setMovingSeatIds] = useState<string[]>([])
 
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
@@ -659,6 +661,82 @@ function App() {
 
     clearEatingSelection()
   }
+
+  const handleStartSeatMove = (seatId: string) => {
+    const group = getEatingGroupBySeatId(seatId)
+
+    if (group) {
+      setMovingSeatIds(group.seats)
+    } else {
+      setMovingSeatIds([seatId])
+    }
+
+    setSeatMoveMode(true)
+    setActiveSeatId(null)
+  }
+
+  const handleMoveSeatTarget = (targetSeatId: string) => {
+    if (movingSeatIds.length === 0) return
+
+    const now = new Date()
+
+    const representativeSeatId =
+      getRepresentativeSeatId(movingSeatIds)
+
+    const movingLabel =
+      eatingLabels[representativeSeatId] ||
+      representativeSeatId
+
+    movingSeatIds.forEach((oldSeatId) => {
+      const overrideReservation = overrideReservations.find(
+        (group) => group.seats.includes(oldSeatId)
+      )
+
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [oldSeatId]: overrideReservation
+          ? "reserved2h"
+          : "empty",
+      }))
+
+      setSeatTimes((prev) => {
+        const next = { ...prev }
+        delete next[oldSeatId]
+        return next
+      })
+
+      setEatingLabels((prev) => {
+        const next = { ...prev }
+        delete next[oldSeatId]
+        return next
+      })
+    })
+
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [targetSeatId]: "occupied",
+    }))
+
+    setSeatTimes((prev) => ({
+      ...prev,
+      [targetSeatId]: now,
+    }))
+
+    setEatingLabels((prev) => ({
+      ...prev,
+      [targetSeatId]: movingLabel,
+    }))
+
+    addAvailabilityItem(
+      [targetSeatId],
+      movingLabel,
+      now
+    )
+
+    setSeatMoveMode(false)
+    setMovingSeatIds([])
+  }
+
   const handleLeave = (id: string) => {
     setConfirmLeaveSeatId(id)
   }
@@ -1155,6 +1233,9 @@ function App() {
     onClearEatingSelection: clearEatingSelection,
     onStartReservation: startReservationFromSeatMenu,
     onOverrideReservation: () => handleOverrideReservation(id),
+    seatMoveMode,
+    onMoveSeatTarget: () => handleMoveSeatTarget(id),
+    onStartSeatMove: () => handleStartSeatMove(id),
     displayLabel:
       eatingLabels[id] !== undefined
         ? eatingLabels[id]
