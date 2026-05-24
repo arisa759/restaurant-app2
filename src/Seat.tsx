@@ -165,7 +165,15 @@ function Seat({
 
         </button>
           {showMenu && (
-            <div className="seat-menu">
+              <div
+                className="seat-menu"
+                style={{
+                  position: "absolute",
+                  top: top + height + 6,
+                  left: left,
+                  zIndex: 1000,
+                }}
+              >
               <button
                 onClick={() => {
                   handleStart()
