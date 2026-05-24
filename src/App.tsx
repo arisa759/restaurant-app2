@@ -95,7 +95,8 @@ function App() {
   >([])
   const [seatMoveMode, setSeatMoveMode] = useState(false)
   const [movingSeatIds, setMovingSeatIds] = useState<string[]>([])
-
+  const [selectedMoveTargetSeats, setSelectedMoveTargetSeats] = useState<string[]>([])
+  const [movingDisplayNumber, setMovingDisplayNumber] = useState("")
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
   const counterSeats = [
@@ -665,39 +666,79 @@ function App() {
   const handleStartSeatMove = (seatId: string) => {
     const group = getEatingGroupBySeatId(seatId)
 
-    if (group) {
-      setMovingSeatIds(group.seats)
-    } else {
-      setMovingSeatIds([seatId])
-    }
+    const sourceSeats = group ? group.seats : [seatId]
 
+    setMovingSeatIds(sourceSeats)
+    setSelectedMoveTargetSeats([])
+    setMovingDisplayNumber("")
     setSeatMoveMode(true)
     setActiveSeatId(null)
   }
 
-  const handleMoveSeatTarget = (targetSeatId: string) => {
-    if (movingSeatIds.length === 0) return
+  const handleMoveTargetSeatClick = (seatId: string) => {
+    if (!seatMoveMode) return
 
-    const now = new Date()
+    const sourceGroup = getSeatGroup(movingSeatIds[0])
+    const targetGroup = getSeatGroup(seatId)
 
-    const representativeSeatId =
-      getRepresentativeSeatId(movingSeatIds)
+    if (sourceGroup !== targetGroup) {
+      alert("同じ種類の席だけ移動できます")
+      return
+    }
 
-    const movingLabel =
-      eatingLabels[representativeSeatId] ||
-      representativeSeatId
+    setSelectedMoveTargetSeats((prev) => {
+      if (prev.includes(seatId)) {
+        return prev.filter((id) => id !== seatId)
+      }
 
-    movingSeatIds.forEach((oldSeatId) => {
-      const overrideReservation = overrideReservations.find(
-        (group) => group.seats.includes(oldSeatId)
-      )
+      return [...prev, seatId]
+    })
+  }
 
+  const restoreSeatAfterMove = (seatId: string) => {
+    const hasReservation = reservations.some(
+      (reservation) =>
+        reservation.status === "reserved" &&
+        reservation.seats.includes(seatId)
+    )
+
+    if (hasReservation) {
       setSeatStatuses((prev) => ({
         ...prev,
-        [oldSeatId]: overrideReservation
-          ? "reserved2h"
-          : "empty",
+        [seatId]: "reserved2h",
       }))
+    } else {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [seatId]: "empty",
+      }))
+    }
+  }
+
+  const handleConfirmSeatMove = () => {
+    if (movingSeatIds.length === 0) return
+
+    if (selectedMoveTargetSeats.length === 0) {
+      alert("移動先の席を選択してください")
+      return
+    }
+
+    if (movingSeatIds.length !== selectedMoveTargetSeats.length) {
+      alert("移動元と同じ数の席を選択してください")
+      return
+    }
+
+  const sourceRepresentativeSeatId = getRepresentativeSeatId(movingSeatIds)
+    const sourceLabel =
+      eatingLabels[sourceRepresentativeSeatId] || sourceRepresentativeSeatId
+
+    const sourceStartTime = seatTimes[sourceRepresentativeSeatId] || new Date()
+
+    const targetRepresentativeSeatId = getRepresentativeSeatId(selectedMoveTargetSeats)
+    const targetLabel = movingDisplayNumber || targetRepresentativeSeatId
+
+    movingSeatIds.forEach((oldSeatId) => {
+      restoreSeatAfterMove(oldSeatId)
 
       setSeatTimes((prev) => {
         const next = { ...prev }
@@ -710,31 +751,67 @@ function App() {
         delete next[oldSeatId]
         return next
       })
+
+      firedRef.current[`${oldSeatId}-donabe`] = false
+      firedRef.current[`${oldSeatId}-food`] = false
     })
 
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [targetSeatId]: "occupied",
-    }))
+    selectedMoveTargetSeats.forEach((newSeatId) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [newSeatId]: "occupied",
+      }))
 
-    setSeatTimes((prev) => ({
-      ...prev,
-      [targetSeatId]: now,
-    }))
+      setSeatTimes((prev) => ({
+        ...prev,
+        [newSeatId]: sourceStartTime,
+      }))
+    })
 
-    setEatingLabels((prev) => ({
-      ...prev,
-      [targetSeatId]: movingLabel,
-    }))
+    setEatingLabels((prev) => {
+      const next = { ...prev }
 
-    addAvailabilityItem(
-      [targetSeatId],
-      movingLabel,
-      now
-    )
+      selectedMoveTargetSeats.forEach((seatId) => {
+        next[seatId] =
+          seatId === targetRepresentativeSeatId ? targetLabel || sourceLabel : ""
+      })
+
+      return next
+    })
+
+    setEatingGroups((prev) => {
+      const withoutOldGroup = prev.filter(
+        (group) => !group.seats.some((seatId) => movingSeatIds.includes(seatId))
+      )
+
+      if (selectedMoveTargetSeats.length <= 1) {
+        return withoutOldGroup
+      }
+
+      return [
+        ...withoutOldGroup,
+        {
+          seats: [...selectedMoveTargetSeats],
+          representativeSeatId: targetRepresentativeSeatId,
+          displayNumber: targetLabel || sourceLabel,
+        },
+      ]
+    })
+
+    removeAvailabilityBySeats(movingSeatIds)
+    addAvailabilityItem(selectedMoveTargetSeats, targetLabel || sourceLabel, sourceStartTime)
 
     setSeatMoveMode(false)
     setMovingSeatIds([])
+    setSelectedMoveTargetSeats([])
+    setMovingDisplayNumber("")
+  }
+
+  const handleCancelSeatMove = () => {
+    setSeatMoveMode(false)
+    setMovingSeatIds([])
+    setSelectedMoveTargetSeats([])
+    setMovingDisplayNumber("")
   }
 
   const handleLeave = (id: string) => {
@@ -1213,37 +1290,45 @@ function App() {
     return ""
   }
 
-  const seatCommonProps = (id: string) => ({
-    activeSeatId,
-    setActiveSeatId,
-    onLeave: handleLeave,
-    status: seatStatuses[id] ?? "empty",
-    onSeatClick: handleReserveSeatClick,
-    isReserveSelected: selectedReserveSeats.includes(id),
-    isEatingSelected: selectedEatingSeats.includes(id),
-    isReservedSeat:
-      seatStatuses[id] === "reserved2h" ||
-      seatStatuses[id] === "reserved1h" ||
-      seatStatuses[id] === "reserved30m",
-    onStartReservedSeat: () => handleStartReservedSeat(id),
-    onCancelReservation: () => handleCancelReservation(id),
-    onEatingSeatClick: handleEatingSeatClick,
-    onOpenSeatMenu: handleOpenSeatMenu,
-    onStartEatingSeats: handleStartEatingSeats,
-    onClearEatingSelection: clearEatingSelection,
-    onStartReservation: startReservationFromSeatMenu,
-    onOverrideReservation: () => handleOverrideReservation(id),
-    seatMoveMode,
-    onMoveSeatTarget: () => handleMoveSeatTarget(id),
-    onStartSeatMove: () => handleStartSeatMove(id),
-    displayLabel:
-      eatingLabels[id] !== undefined
-        ? eatingLabels[id]
-        : reservationLabels[id] !== undefined
-        ? reservationLabels[id]
-        : id,
-    subText: getSeatSubText(id),
-  })
+const seatCommonProps = (id: string) => ({
+  activeSeatId,
+  setActiveSeatId,
+  onLeave: handleLeave,
+  status: seatStatuses[id] ?? "empty",
+
+  onSeatClick: handleReserveSeatClick,
+  isReserveSelected: selectedReserveSeats.includes(id),
+  isEatingSelected: selectedEatingSeats.includes(id),
+
+  isReservedSeat:
+    seatStatuses[id] === "reserved2h" ||
+    seatStatuses[id] === "reserved1h" ||
+    seatStatuses[id] === "reserved30m",
+
+  onStartReservedSeat: () => handleStartReservedSeat(id),
+  onCancelReservation: () => handleCancelReservation(id),
+
+  onEatingSeatClick: handleEatingSeatClick,
+  onOpenSeatMenu: handleOpenSeatMenu,
+  onStartEatingSeats: handleStartEatingSeats,
+  onClearEatingSelection: clearEatingSelection,
+  onStartReservation: startReservationFromSeatMenu,
+  onOverrideReservation: () => handleOverrideReservation(id),
+
+  seatMoveMode,
+  isMoveTargetSelected: selectedMoveTargetSeats.includes(id),
+  onMoveSeatTarget: () => handleMoveTargetSeatClick(id),
+  onStartSeatMove: () => handleStartSeatMove(id),
+
+  displayLabel:
+    eatingLabels[id] !== undefined
+      ? eatingLabels[id]
+      : reservationLabels[id] !== undefined
+      ? reservationLabels[id]
+      : id,
+
+  subText: getSeatSubText(id),
+})
 
    return (
     <div>
@@ -1312,6 +1397,47 @@ function App() {
                     {item.text}
                   </div>
                 ))}
+            </div>
+          )}
+
+          {seatMoveMode && (
+            <div className="reservation-panel">
+              <div>
+                移動元：
+                {movingSeatIds.join(" + ")}
+                {" → "}
+                移動先：
+                {selectedMoveTargetSeats.length > 0
+                  ? selectedMoveTargetSeats.join(" + ")
+                  : "未選択"}
+              </div>
+
+              {selectedMoveTargetSeats.length > 1 &&
+                getSeatGroup(selectedMoveTargetSeats[0]) === "table" && (
+                  <div>
+                    表示席番号：
+                    <select
+                      value={movingDisplayNumber}
+                      onChange={(e) => setMovingDisplayNumber(e.target.value)}
+                      className="reserve-seat-number-select"
+                    >
+                      <option value="">席番号選択</option>
+                      {tableSeats.map((seatId) => (
+                        <option key={seatId} value={seatId}>
+                          {seatId}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+              <button onClick={handleConfirmSeatMove}>
+                移動確定
+              </button>
+
+              <button onClick={handleCancelSeatMove}>
+                キャンセル
+              </button>
             </div>
           )}
 

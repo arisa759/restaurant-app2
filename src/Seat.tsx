@@ -6,26 +6,34 @@ type Props = {
   left: number
   width?: number
   height?: number
+
   activeSeatId: string | null
+
   onSeatClick?: (id: string) => void
   onLeave: (id: string) => void
+
   isReserveSelected?: boolean
   isMerged?: boolean
   displayLabel?: string
   isEatingSelected?: boolean
+  isMoveTargetSelected?: boolean
   subText?: string
+
   onEatingSeatClick?: (id: string) => void
   onOpenSeatMenu?: (id: string) => void
   onStartEatingSeats?: () => void
   onClearEatingSelection?: () => void
   onStartReservation?: () => void
+
   isReservedSeat?: boolean
   onStartReservedSeat?: () => void
   onCancelReservation?: () => void
   onOverrideReservation?: () => void
+
   seatMoveMode?: boolean
   onMoveSeatTarget?: () => void
   onStartSeatMove?: () => void
+
   status?:
     | "empty"
     | "occupied"
@@ -49,6 +57,7 @@ function Seat({
   displayLabel,
   isReserveSelected = false,
   isEatingSelected = false,
+  isMoveTargetSelected = false,
   subText,
   onEatingSeatClick,
   onOpenSeatMenu,
@@ -120,11 +129,13 @@ function Seat({
   const textColor =
   status === "reserved30m" || status === "reserved1h" ? "white" : "black"
   const displayColor =
-  isEatingSelected
-    ? "yellow"
-    : isReserveSelected
-    ? "yellow"
-    : seatColor
+    isMoveTargetSelected
+      ? "yellow"
+      : isEatingSelected
+      ? "yellow"
+      : isReserveSelected
+      ? "yellow"
+      : seatColor
 
   return (
 
