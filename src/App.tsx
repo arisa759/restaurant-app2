@@ -599,69 +599,69 @@ function App() {
   }
 
   const handleOverrideReservation = (seatId: string) => {
-    const reservation = getReservationBySeatId(seatId)
+  const reservation = getReservationBySeatId(seatId)
 
-    if (!reservation) {
-      alert("予約が見つかりません")
-      return
-    }
+  if (!reservation) {
+    alert("予約が見つかりません")
+    return
+  }
 
-    const now = new Date()
+  const now = new Date()
 
-    const targetSeats =
-      selectedEatingSeats.length > 0
-        ? selectedEatingSeats
-        : [seatId]
+  const targetSeats =
+    selectedEatingSeats.length > 0
+      ? selectedEatingSeats
+      : [seatId]
+
+  targetSeats.forEach((id) => {
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [id]: "occupied",
+    }))
+
+    setSeatTimes((prev) => ({
+      ...prev,
+      [id]: now,
+    }))
+  })
+
+  const representativeSeatId = getRepresentativeSeatId(targetSeats)
+  const displayNumber = representativeSeatId
+
+  setEatingLabels((prev) => {
+    const next = { ...prev }
 
     targetSeats.forEach((id) => {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [id]: "occupied",
-      }))
-
-      setSeatTimes((prev) => ({
-        ...prev,
-        [id]: now,
-      }))
+      next[id] = id === representativeSeatId ? displayNumber : ""
     })
 
-    const representativeSeatId = getRepresentativeSeatId(targetSeats)
-    const displayNumber = representativeSeatId
+    return next
+  })
 
-    setEatingLabels((prev) => {
-      const next = { ...prev }
-
-      targetSeats.forEach((id) => {
-        next[id] = id === representativeSeatId ? displayNumber : ""
-      })
-
-      return next
-    })
-
-    if (targetSeats.length > 1) {
-      setEatingGroups((prev) => [
-        ...prev,
-        {
-          seats: [...targetSeats],
-          representativeSeatId,
-          displayNumber,
-        },
-      ])
-    }
-
-    addAvailabilityItem(targetSeats, displayNumber, now)
-
-    setOverrideReservations((prev) => [
+  if (targetSeats.length > 1) {
+    setEatingGroups((prev) => [
       ...prev,
       {
-        reservationId: reservation.id,
         seats: [...targetSeats],
-        displaySeatNumber: displayNumber,
+        representativeSeatId,
+        displayNumber,
       },
     ])
-
-    clearEatingSelection()
   }
+
+  addAvailabilityItem(targetSeats, displayNumber, now)
+
+  setOverrideReservations((prev) => [
+    ...prev,
+    {
+      reservationId: reservation.id,
+      seats: [...targetSeats],
+      displaySeatNumber: displayNumber,
+    },
+  ])
+
+  clearEatingSelection()
+}
 
   const handleStartSeatMove = (seatId: string) => {
     const group = getEatingGroupBySeatId(seatId)
@@ -695,118 +695,170 @@ function App() {
     })
   }
 
-  const restoreSeatAfterMove = (seatId: string) => {
-    const hasReservation = reservations.some(
-      (reservation) =>
-        reservation.status === "reserved" &&
-        reservation.seats.includes(seatId)
-    )
+  const handleConfirmSeatMove = () => {
+  if (movingSeatIds.length === 0) return
 
-    if (hasReservation) {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "reserved2h",
-      }))
-    } else {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "empty",
-      }))
-    }
+  if (selectedMoveTargetSeats.length === 0) {
+    alert("移動先の席を選択してください")
+    return
   }
 
-  const handleConfirmSeatMove = () => {
-    if (movingSeatIds.length === 0) return
+  if (movingSeatIds.length !== selectedMoveTargetSeats.length) {
+    alert("移動元と同じ数の席を選択してください")
+    return
+  }
 
-    if (selectedMoveTargetSeats.length === 0) {
-      alert("移動先の席を選択してください")
-      return
-    }
+  const sourceReservation = reservations.find(
+    (reservation) =>
+      reservation.status === "reserved" &&
+      reservation.seats.some((seatId) => movingSeatIds.includes(seatId))
+  )
 
-    if (movingSeatIds.length !== selectedMoveTargetSeats.length) {
-      alert("移動元と同じ数の席を選択してください")
-      return
-    }
+  const sourceIsEating = movingSeatIds.some((seatId) =>
+    ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
+  )
 
   const sourceRepresentativeSeatId = getRepresentativeSeatId(movingSeatIds)
-    const sourceLabel =
-      eatingLabels[sourceRepresentativeSeatId] || sourceRepresentativeSeatId
+  const sourceLabel =
+    eatingLabels[sourceRepresentativeSeatId] ||
+    reservationLabels[sourceRepresentativeSeatId] ||
+    sourceRepresentativeSeatId
 
-    const sourceStartTime = seatTimes[sourceRepresentativeSeatId] || new Date()
+  const sourceStartTime = seatTimes[sourceRepresentativeSeatId] || new Date()
 
-    const targetRepresentativeSeatId = getRepresentativeSeatId(selectedMoveTargetSeats)
-    const targetLabel = movingDisplayNumber || targetRepresentativeSeatId
+  const targetRepresentativeSeatId =
+    getRepresentativeSeatId(selectedMoveTargetSeats)
 
-    movingSeatIds.forEach((oldSeatId) => {
-      restoreSeatAfterMove(oldSeatId)
+  const targetLabel =
+    movingDisplayNumber || targetRepresentativeSeatId || sourceLabel
 
-      setSeatTimes((prev) => {
-        const next = { ...prev }
-        delete next[oldSeatId]
-        return next
-      })
+  movingSeatIds.forEach((oldSeatId) => {
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [oldSeatId]: "empty",
+    }))
 
-      setEatingLabels((prev) => {
-        const next = { ...prev }
-        delete next[oldSeatId]
-        return next
-      })
-
-      firedRef.current[`${oldSeatId}-donabe`] = false
-      firedRef.current[`${oldSeatId}-food`] = false
+    setSeatTimes((prev) => {
+      const next = { ...prev }
+      delete next[oldSeatId]
+      return next
     })
 
-    selectedMoveTargetSeats.forEach((newSeatId) => {
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [newSeatId]: "occupied",
-      }))
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+      delete next[oldSeatId]
+      return next
+    })
 
+    setReservationLabels((prev) => {
+      const next = { ...prev }
+      delete next[oldSeatId]
+      return next
+    })
+
+    firedRef.current[`${oldSeatId}-donabe`] = false
+    firedRef.current[`${oldSeatId}-food`] = false
+  })
+
+  selectedMoveTargetSeats.forEach((newSeatId) => {
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [newSeatId]: sourceIsEating ? "occupied" : "reserved2h",
+    }))
+
+    if (sourceIsEating) {
       setSeatTimes((prev) => ({
         ...prev,
         [newSeatId]: sourceStartTime,
       }))
-    })
+    }
+  })
 
+  if (sourceIsEating) {
     setEatingLabels((prev) => {
       const next = { ...prev }
 
       selectedMoveTargetSeats.forEach((seatId) => {
         next[seatId] =
-          seatId === targetRepresentativeSeatId ? targetLabel || sourceLabel : ""
+          seatId === targetRepresentativeSeatId ? targetLabel : ""
+      })
+
+      return next
+    })
+  }
+
+  if (sourceReservation) {
+    setReservations((prev) =>
+      prev.map((reservation) =>
+        reservation.id === sourceReservation.id
+          ? {
+              ...reservation,
+              seats: [...selectedMoveTargetSeats],
+              displaySeatNumber: targetLabel,
+            }
+          : reservation
+      )
+    )
+
+    setReservationLabels((prev) => {
+      const next = { ...prev }
+
+      selectedMoveTargetSeats.forEach((seatId) => {
+        next[seatId] =
+          seatId === targetRepresentativeSeatId ? targetLabel : ""
       })
 
       return next
     })
 
-    setEatingGroups((prev) => {
-      const withoutOldGroup = prev.filter(
-        (group) => !group.seats.some((seatId) => movingSeatIds.includes(seatId))
-      )
+    selectedMoveTargetSeats.forEach((seatId) => {
+      const oldReserveTime =
+        reservationTimes[sourceReservation.seats[0]]
 
-      if (selectedMoveTargetSeats.length <= 1) {
-        return withoutOldGroup
+      if (oldReserveTime) {
+        setReservationTimes((prev) => ({
+          ...prev,
+          [seatId]: oldReserveTime,
+        }))
       }
-
-      return [
-        ...withoutOldGroup,
-        {
-          seats: [...selectedMoveTargetSeats],
-          representativeSeatId: targetRepresentativeSeatId,
-          displayNumber: targetLabel || sourceLabel,
-        },
-      ]
     })
-
-    removeAvailabilityBySeats(movingSeatIds)
-    addAvailabilityItem(selectedMoveTargetSeats, targetLabel || sourceLabel, sourceStartTime)
-
-    setSeatMoveMode(false)
-    setMovingSeatIds([])
-    setSelectedMoveTargetSeats([])
-    setMovingDisplayNumber("")
   }
 
+  setEatingGroups((prev) => {
+    const withoutOldGroup = prev.filter(
+      (group) =>
+        !group.seats.some((seatId) => movingSeatIds.includes(seatId))
+    )
+
+    if (!sourceIsEating || selectedMoveTargetSeats.length <= 1) {
+      return withoutOldGroup
+    }
+
+    return [
+      ...withoutOldGroup,
+      {
+        seats: [...selectedMoveTargetSeats],
+        representativeSeatId: targetRepresentativeSeatId,
+        displayNumber: targetLabel,
+      },
+    ]
+  })
+
+  removeAvailabilityBySeats(movingSeatIds)
+
+  if (sourceIsEating) {
+    addAvailabilityItem(
+      selectedMoveTargetSeats,
+      targetLabel,
+      sourceStartTime
+    )
+  }
+
+  setSeatMoveMode(false)
+  setMovingSeatIds([])
+  setSelectedMoveTargetSeats([])
+  setMovingDisplayNumber("")
+}
   const handleCancelSeatMove = () => {
     setSeatMoveMode(false)
     setMovingSeatIds([])
