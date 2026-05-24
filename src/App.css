@@ -501,11 +501,38 @@
 }
 
 .reservation-card {
-  border: 1px solid black;
-  padding: 10px;
+  background-color: white;
+  border-radius: 10px;
+  padding: 10px 12px;
   margin-bottom: 10px;
-  background-color: #f7f7f7;
-  font-size: 15px;
+  border: 1px solid #ddd;
+}
+
+.reservation-main-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.reservation-memo-row {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #666;
+  padding-left: 28px;
+}
+
+.reservation-name {
+  min-width: 90px;
+}
+
+.reservation-people {
+  min-width: 70px;
+}
+
+.reservation-seat {
+  min-width: 70px;
 }
 
 .reservation-check-row {
@@ -554,7 +581,7 @@
   border: none;
   padding: 11px 14px;
   font-size: 15px;
-  text-align: left;
+  text-align: center;
   border-radius: 10px;
 }
 

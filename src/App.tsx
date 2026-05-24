@@ -1034,27 +1034,37 @@ function App() {
 
         {getSortedReservations().map((reservation) => (
           <div key={reservation.id} className="reservation-card">
-            <label className="reservation-check-row">
-              <input
-                type="checkbox"
-                onChange={() => {
-                  handleSeatReservation(reservation)
-                }}
-              />
+            <div className="reservation-main-row">
+              <label className="reservation-check-row">
+                <input
+                  type="checkbox"
+                  onChange={() => {
+                    handleSeatReservation(reservation)
+                  }}
+                />
 
-              <span>{reservation.time}</span>
-            </label>
+                <span>{reservation.time}</span>
+              </label>
 
-            <div>{reservation.customerName}</div>
-            <div>{getReservationPeopleText(reservation)}</div>
-            <div>席：{reservation.displaySeatNumber}</div>
+              <div className="reservation-name">
+                {reservation.customerName}
+              </div>
+
+              <div className="reservation-people">
+                {getReservationPeopleText(reservation)}
+              </div>
+
+              <div className="reservation-seat">
+                席：{reservation.displaySeatNumber}
+              </div>
+            </div>
 
             {reservation.memo && (
-              <div className="reservation-memo">
-                {reservation.memo}
+              <div className="reservation-memo-row">
+                メモ：{reservation.memo}
               </div>
             )}
-          </div>
+</div>
         ))}
       </div>
 
