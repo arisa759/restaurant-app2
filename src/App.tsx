@@ -456,80 +456,70 @@ function App() {
     clearEatingSelection()
   }
   
-  const handleSeatReservation = (reservation: Reservation) => {
-    const now = new Date()
+ const handleSeatReservation = (reservation: Reservation) => {
+  const now = new Date()
+  const representativeSeatId = getRepresentativeSeatId(reservation.seats)
 
-    const representativeSeatId = getRepresentativeSeatId(
-      reservation.seats
-    )
+  reservation.seats.forEach((seatId) => {
+    setSeatTimes((prev) => ({
+      ...prev,
+      [seatId]: now,
+    }))
+
+    setSeatStatuses((prev) => ({
+      ...prev,
+      [seatId]: "occupied",
+    }))
+  })
+
+  setEatingLabels((prev) => {
+    const next = { ...prev }
 
     reservation.seats.forEach((seatId) => {
-      setSeatTimes((prev) => ({
-        ...prev,
-        [seatId]: now,
-      }))
-
-      setSeatStatuses((prev) => ({
-        ...prev,
-        [seatId]: "occupied",
-      }))
+      next[seatId] =
+        seatId === representativeSeatId
+          ? reservation.displaySeatNumber
+          : ""
     })
 
-    setEatingLabels((prev) => {
+    return next
+  })
+
+  if (reservation.seats.length > 1) {
+    setEatingGroups((prev) => [
+      ...prev,
+      {
+        seats: [...reservation.seats],
+        representativeSeatId,
+        displayNumber: reservation.displaySeatNumber,
+      },
+    ])
+  }
+
+  addAvailabilityItem(reservation.seats, reservation.displaySeatNumber, now)
+
+  setReservations((prev) =>
+    prev.map((r) =>
+      r.id === reservation.id
+        ? { ...r, status: "seated" }
+        : r
+    )
+  )
+
+  reservation.seats.forEach((seatId) => {
+    setReservationTimes((prev) => {
       const next = { ...prev }
-
-      reservation.seats.forEach((seatId) => {
-        next[seatId] =
-          seatId === representativeSeatId
-            ? reservation.displaySeatNumber
-            : ""
-      })
-
+      delete next[seatId]
       return next
     })
 
-    if (reservation.seats.length > 1) {
-      setEatingGroups((prev) => [
-        ...prev,
-        {
-          seats: [...reservation.seats],
-          representativeSeatId,
-          displayNumber: reservation.displaySeatNumber,
-        },
-      ])
-    }
-
-    addAvailabilityItem(
-      reservation.seats,
-      reservation.displaySeatNumber,
-      now
-    )
-
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === reservation.id
-          ? {
-              ...r,
-              status: "seated",
-            }
-          : r
-      )
-    )
-
-    reservation.seats.forEach((seatId) => {
-      setReservationTimes((prev) => {
-        const next = { ...prev }
-        delete next[seatId]
-        return next
-      })
-
-      setReservationLabels((prev) => {
-        const next = { ...prev }
-        delete next[seatId]
-        return next
-      })
+    setReservationLabels((prev) => {
+      const next = { ...prev }
+      delete next[seatId]
+      return next
     })
-  }
+  })
+}
 
   const getReservationBySeatId = (seatId: string) => {
     return reservations.find(
