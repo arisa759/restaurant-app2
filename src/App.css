@@ -536,3 +536,32 @@
   font-size: 16px;
   margin: 0 8px 0 4px;
 }
+
+.seat-menu {
+  min-width: 130px;
+  background-color: white;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid #ddd;
+}
+
+.seat-menu button {
+  background-color: white;
+  border: none;
+  padding: 11px 14px;
+  font-size: 15px;
+  text-align: left;
+  border-radius: 10px;
+}
+
+.seat-menu button:active {
+  background-color: #eeeeee;
+}
+
+.seat-menu button:hover {
+  background-color: #f2f2f2;
+}
