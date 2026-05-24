@@ -605,7 +605,12 @@ function App() {
 
     const now = new Date()
 
-    reservation.seats.forEach((id) => {
+    const targetSeats =
+      selectedEatingSeats.length > 0
+        ? selectedEatingSeats
+        : [seatId]
+
+    targetSeats.forEach((id) => {
       setSeatStatuses((prev) => ({
         ...prev,
         [id]: "occupied",
@@ -617,44 +622,43 @@ function App() {
       }))
     })
 
-    const representativeSeatId = getRepresentativeSeatId(
-      reservation.seats
-    )
+    const representativeSeatId = getRepresentativeSeatId(targetSeats)
+    const displayNumber = representativeSeatId
 
     setEatingLabels((prev) => {
       const next = { ...prev }
 
-      reservation.seats.forEach((id) => {
-        next[id] =
-          id === representativeSeatId
-            ? reservation.displaySeatNumber
-            : ""
+      targetSeats.forEach((id) => {
+        next[id] = id === representativeSeatId ? displayNumber : ""
       })
 
       return next
     })
 
-    if (reservation.seats.length > 1) {
+    if (targetSeats.length > 1) {
       setEatingGroups((prev) => [
         ...prev,
         {
-          seats: [...reservation.seats],
+          seats: [...targetSeats],
           representativeSeatId,
-          displayNumber: reservation.displaySeatNumber,
+          displayNumber,
         },
       ])
     }
+
+    addAvailabilityItem(targetSeats, displayNumber, now)
 
     setOverrideReservations((prev) => [
       ...prev,
       {
         reservationId: reservation.id,
-        seats: [...reservation.seats],
-        displaySeatNumber: reservation.displaySeatNumber,
+        seats: [...targetSeats],
+        displaySeatNumber: displayNumber,
       },
     ])
-  }
 
+    clearEatingSelection()
+  }
   const handleLeave = (id: string) => {
     setConfirmLeaveSeatId(id)
   }
@@ -847,7 +851,7 @@ function App() {
       }
     })
 
-    if (selectedReserveSeats.length > 1 && hasEatingSeat) {
+    if (hasEatingSeat) {
       setMergedReserveGroups((prev) => [
         ...prev,
         {
