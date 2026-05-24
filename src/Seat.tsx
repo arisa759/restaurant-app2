@@ -164,90 +164,43 @@ function Seat({
         )}
 
         </button>
-      {showMenu && (
-        <div
-            style={{
-            position: "absolute",
-            top: top + height + 8,
-            left: left,
-            zIndex: 100,
-            width: 150,
-            borderRadius: 14,
-            overflow: "hidden",
-            boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
-            animation: "popMenu 0.18s ease-out",
-            backgroundColor: "rgba(255, 255, 255, 0.85)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid rgba(0,0,0,0.25)",
-            }}
-        >
-            <button
-            onClick={() => {
-              if (onStartEatingSeats) {
-                onStartEatingSeats()
-              } else {
-                handleStart()
-              }
+          {showMenu && (
+            <div className="seat-menu">
+              <button
+                onClick={() => {
+                  handleStart()
+                }}
+              >
+                着席開始
+              </button>
 
-              setShowMenu(false)
-            }}
-            style={{
-                width: "100%",
-                padding: 12,
-                fontSize: 16,
-                color: "black",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: "1px solid rgba(0,0,0,1)",
-                textAlign: "center",
-                fontWeight: "normal",
-            }}
-            >
-            着席開始
-            </button>       
-            <button
-            onClick={handleLeave}
-            style={{
-                width: "100%",
-                padding: 12,
-                fontSize: 16,
-                color: "black",
-                backgroundColor: "transparent",
-                border: "none",
-                borderBottom: "1px solid rgba(0,0,0,0.2)",
-                textAlign: "center",
-                fontWeight: "normal",
-            }}
-            >
-            <button
-              onClick={() => {
-                onStartReservation?.()
-                setShowMenu(false)
-                onClearEatingSelection?.()
-              }}
-            >
-              予約
-            </button>
-            退店
-            </button>
-            <button
-            onClick={handleClose}
-            style={{
-                width: "100%",
-                padding: 12,
-                fontSize: 16,
-                color: "black",
-                backgroundColor: "transparent",
-                border: "none",
-                textAlign: "center",
-                fontWeight: "normal",
-            }}
-            >
-            閉じる
-            </button>
-        </div>
-        )}
+              <button
+                onClick={() => {
+                  onStartReservation?.()
+                  setShowMenu(false)
+                  onClearEatingSelection?.()
+                }}
+              >
+                予約
+              </button>
+
+              <button
+                onClick={() => {
+                  handleLeave()
+                }}
+              >
+                退店
+              </button>
+
+              <button
+                onClick={() => {
+                  handleClose()
+                }}
+              >
+                閉じる
+              </button>
+            </div>
+          )}
     </>
   )
 }
