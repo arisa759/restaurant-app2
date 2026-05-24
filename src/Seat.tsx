@@ -18,6 +18,7 @@ type Props = {
   onOpenSeatMenu?: (id: string) => void
   onStartEatingSeats?: () => void
   onClearEatingSelection?: () => void
+  onStartReservation?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -46,6 +47,7 @@ function Seat({
   onOpenSeatMenu,
   onStartEatingSeats,
   onClearEatingSelection,
+  onStartReservation,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
 
@@ -203,7 +205,7 @@ function Seat({
             }}
             >
             着席開始
-            </button>
+            </button>       
             <button
             onClick={handleLeave}
             style={{
@@ -218,6 +220,15 @@ function Seat({
                 fontWeight: "normal",
             }}
             >
+            <button
+              onClick={() => {
+                onStartReservation?.()
+                setShowMenu(false)
+                onClearEatingSelection?.()
+              }}
+            >
+              予約
+            </button>
             退店
             </button>
             <button

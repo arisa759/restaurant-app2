@@ -322,6 +322,22 @@ function App() {
     setEatingDisplayNumber("")
   }
 
+  const startReservationFromSeatMenu = () => {
+  setReservationMode(true)
+
+  setSelectedReserveSeats([...selectedEatingSeats])
+
+  setReserveTimeText("")
+  setReserveDisplayNumber("")
+
+  setReserveCustomerName("")
+  setReserveAdultCount(2)
+  setReserveChildCount(0)
+  setReserveMemo("")
+
+  setActiveSeatId(null)
+}
+
   const handleEatingSeatClick = (id: string) => {
     if (!activeSeatId) return
     if (id === activeSeatId) return
@@ -990,6 +1006,7 @@ function App() {
     onOpenSeatMenu: handleOpenSeatMenu,
     onStartEatingSeats: handleStartEatingSeats,
     onClearEatingSelection: clearEatingSelection,
+    onStartReservation: startReservationFromSeatMenu,
     displayLabel:
       eatingLabels[id] !== undefined
         ? eatingLabels[id]
