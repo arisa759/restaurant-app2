@@ -86,6 +86,13 @@ function App() {
   const [reserveAdultCount, setReserveAdultCount] = useState(2)
   const [reserveChildCount, setReserveChildCount] = useState(0)
   const [reserveMemo, setReserveMemo] = useState("")
+  const [overrideReservations, setOverrideReservations] = useState<
+    {
+      reservationId: string
+      seats: string[]
+      displaySeatNumber: string
+    }[]
+  >([])
 
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
@@ -588,6 +595,66 @@ function App() {
     setReservationMode(false)
   }
 
+  const handleOverrideReservation = (seatId: string) => {
+    const reservation = getReservationBySeatId(seatId)
+
+    if (!reservation) {
+      alert("予約が見つかりません")
+      return
+    }
+
+    const now = new Date()
+
+    reservation.seats.forEach((id) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [id]: "occupied",
+      }))
+
+      setSeatTimes((prev) => ({
+        ...prev,
+        [id]: now,
+      }))
+    })
+
+    const representativeSeatId = getRepresentativeSeatId(
+      reservation.seats
+    )
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+
+      reservation.seats.forEach((id) => {
+        next[id] =
+          id === representativeSeatId
+            ? reservation.displaySeatNumber
+            : ""
+      })
+
+      return next
+    })
+
+    if (reservation.seats.length > 1) {
+      setEatingGroups((prev) => [
+        ...prev,
+        {
+          seats: [...reservation.seats],
+          representativeSeatId,
+          displayNumber: reservation.displaySeatNumber,
+        },
+      ])
+    }
+
+    setOverrideReservations((prev) => [
+      ...prev,
+      {
+        reservationId: reservation.id,
+        seats: [...reservation.seats],
+        displaySeatNumber: reservation.displaySeatNumber,
+      },
+    ])
+  }
+
   const handleLeave = (id: string) => {
     setConfirmLeaveSeatId(id)
   }
@@ -597,9 +664,12 @@ function App() {
 
     if (group && id === group.representativeSeatId) {
       group.seats.forEach((seatId) => {
+        const overrideReservation = overrideReservations.find((group) =>
+          group.seats.includes(id)
+        )
         setSeatStatuses((prev) => ({
           ...prev,
-          [seatId]: "empty",
+          [id]: overrideReservation ? "reserved2h" : "empty",
         }))
 
         setSeatTimes((prev) => {
@@ -1080,6 +1150,7 @@ function App() {
     onStartEatingSeats: handleStartEatingSeats,
     onClearEatingSelection: clearEatingSelection,
     onStartReservation: startReservationFromSeatMenu,
+    onOverrideReservation: () => handleOverrideReservation(id),
     displayLabel:
       eatingLabels[id] !== undefined
         ? eatingLabels[id]
@@ -1329,6 +1400,29 @@ function App() {
                 border: "4px solid black",
                 backgroundColor: "rgba(135, 206, 250, 0.25)",
                 zIndex: 5,
+                pointerEvents: "none",
+              }}
+            />
+          )
+        })}
+
+        {overrideReservations.map((group, index) => {
+          const box = getMergedBox(group.seats)
+
+          if (!box) return null
+
+          return (
+            <div
+              key={`override-${index}`}
+              style={{
+                position: "absolute",
+                top: box.top,
+                left: box.left,
+                width: box.width,
+                height: box.height,
+                border: "4px dashed #00bfff",
+                backgroundColor: "rgba(0,191,255,0.15)",
+                zIndex: 4,
                 pointerEvents: "none",
               }}
             />

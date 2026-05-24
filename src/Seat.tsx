@@ -22,6 +22,7 @@ type Props = {
   isReservedSeat?: boolean
   onStartReservedSeat?: () => void
   onCancelReservation?: () => void
+  onOverrideReservation?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -54,6 +55,7 @@ function Seat({
   isReservedSeat = false,
   onStartReservedSeat,
   onCancelReservation,
+  onOverrideReservation,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
 
@@ -194,7 +196,9 @@ function Seat({
 
                   <button
                     onClick={() => {
-                      alert("割り込み着席は次の段階で実装します")
+                      onOverrideReservation?.()
+                      setShowMenu(false)
+                      onClearEatingSelection?.()
                     }}
                   >
                     割り込み着席
