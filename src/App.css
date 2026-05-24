@@ -462,3 +462,77 @@
   color: black;
   font-size: 14px;
 }
+
+.reservation-panel-toggle {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  z-index: 500;
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+  background-color: white;
+  border: 2px solid black;
+}
+
+.reservation-side-panel {
+  position: fixed;
+  top: 0;
+  right: -330px;
+  width: 320px;
+  height: 100vh;
+  background-color: white;
+  border-left: 2px solid black;
+  z-index: 450;
+  padding: 60px 12px 12px;
+  box-sizing: border-box;
+  transition: right 0.25s ease;
+  overflow-y: auto;
+}
+
+.reservation-side-panel.open {
+  right: 0;
+}
+
+.reservation-side-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+.reservation-card {
+  border: 1px solid black;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f7f7f7;
+  font-size: 15px;
+}
+
+.reservation-check-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.reservation-memo {
+  margin-top: 6px;
+  padding: 6px;
+  background-color: #fff8dc;
+  border: 1px solid #ccc;
+}
+
+.reservation-input {
+  width: 140px;
+  height: 30px;
+  font-size: 16px;
+  margin-left: 6px;
+}
+
+.reservation-number-input {
+  width: 55px;
+  height: 30px;
+  font-size: 16px;
+  margin: 0 8px 0 4px;
+}

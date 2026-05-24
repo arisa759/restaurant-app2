@@ -38,6 +38,19 @@ type AvailabilityItem = {
   displayNumber: string
 }
 
+type Reservation = {
+  id: string
+  time: string
+  customerName: string
+  adultCount: number
+  childCount: number
+  memo: string
+  seats: string[]
+  displaySeatNumber: string
+  createdAt: number
+  status: "reserved" | "seated" | "cancelled" | "waiting"
+}
+
 function App() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [activeSeatId, setActiveSeatId] = useState<string | null>(null)
@@ -66,6 +79,13 @@ function App() {
   const [eatingLabels, setEatingLabels] = useState<{ [key: string]: string }>({})
   const [eatingGroups, setEatingGroups] = useState<EatingGroup[]>([])
   const [availabilityItems, setAvailabilityItems] = useState<AvailabilityItem[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [reservationPanelOpen, setReservationPanelOpen] = useState(false)
+
+  const [reserveCustomerName, setReserveCustomerName] = useState("")
+  const [reserveAdultCount, setReserveAdultCount] = useState(2)
+  const [reserveChildCount, setReserveChildCount] = useState(0)
+  const [reserveMemo, setReserveMemo] = useState("")
 
   const firedRef = useRef<{ [key: string]: boolean }>({})
 
@@ -219,6 +239,26 @@ function App() {
     if (group === "table") return reserveDisplayNumber
 
     return selectedReserveSeats[0]
+  }
+
+  const getSortedReservations = () => {
+    return [...reservations]
+      .filter((reservation) => reservation.status === "reserved")
+      .sort((a, b) => {
+        if (a.time !== b.time) {
+          return a.time.localeCompare(b.time)
+        }
+
+        return a.createdAt - b.createdAt
+      })
+  }
+
+  const getReservationPeopleText = (reservation: Reservation) => {
+    if (reservation.childCount > 0) {
+      return `大${reservation.adultCount}＋小${reservation.childCount}`
+    }
+
+    return `${reservation.adultCount}名`
   }
 
   const getMergedBox = (group: string[]) => {
@@ -388,6 +428,81 @@ function App() {
 
     addAvailabilityItem(selectedEatingSeats, label, now)
     clearEatingSelection()
+  }
+  
+  const handleSeatReservation = (reservation: Reservation) => {
+    const now = new Date()
+
+    const representativeSeatId = getRepresentativeSeatId(
+      reservation.seats
+    )
+
+    reservation.seats.forEach((seatId) => {
+      setSeatTimes((prev) => ({
+        ...prev,
+        [seatId]: now,
+      }))
+
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [seatId]: "occupied",
+      }))
+    })
+
+    setEatingLabels((prev) => {
+      const next = { ...prev }
+
+      reservation.seats.forEach((seatId) => {
+        next[seatId] =
+          seatId === representativeSeatId
+            ? reservation.displaySeatNumber
+            : ""
+      })
+
+      return next
+    })
+
+    if (reservation.seats.length > 1) {
+      setEatingGroups((prev) => [
+        ...prev,
+        {
+          seats: [...reservation.seats],
+          representativeSeatId,
+          displayNumber: reservation.displaySeatNumber,
+        },
+      ])
+    }
+
+    addAvailabilityItem(
+      reservation.seats,
+      reservation.displaySeatNumber,
+      now
+    )
+
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === reservation.id
+          ? {
+              ...r,
+              status: "seated",
+            }
+          : r
+      )
+    )
+
+    reservation.seats.forEach((seatId) => {
+      setReservationTimes((prev) => {
+        const next = { ...prev }
+        delete next[seatId]
+        return next
+      })
+
+      setReservationLabels((prev) => {
+        const next = { ...prev }
+        delete next[seatId]
+        return next
+      })
+    })
   }
 
   const handleLeave = (id: string) => {
@@ -595,12 +710,29 @@ function App() {
         const next = { ...prev }
 
         selectedReserveSeats.forEach((seatId) => {
-          next[seatId] = seatId === representativeSeatId ? reservationSeatNumber : ""
+          next[seatId] =
+            seatId === representativeSeatId ? reservationSeatNumber : ""
         })
 
         return next
       })
     }
+
+    setReservations((prev) => [
+      ...prev,
+      {
+        id: `reservation-${Date.now()}`,
+        time: reserveTimeText,
+        customerName: reserveCustomerName || "名前未入力",
+        adultCount: reserveAdultCount,
+        childCount: reserveChildCount,
+        memo: reserveMemo,
+        seats: [...selectedReserveSeats],
+        displaySeatNumber: reservationSeatNumber,
+        createdAt: Date.now(),
+        status: "reserved",
+      },
+    ])
 
     alert(`予約席番号：${reservationSeatNumber}\n予約時間：${reserveTimeText}`)
 
@@ -608,6 +740,10 @@ function App() {
     setSelectedReserveSeats([])
     setReserveTimeText("")
     setReserveDisplayNumber("")
+    setReserveCustomerName("")
+    setReserveAdultCount(2)
+    setReserveChildCount(0)
+    setReserveMemo("")
   }
 
   useEffect(() => {
@@ -802,7 +938,7 @@ function App() {
     setConfirmFoodCheck(null)
   }
 
-　const getSeatSubText = (id: string) => {
+  const getSeatSubText = (id: string) => {
     const status = seatStatuses[id]
 
     if (
@@ -863,37 +999,65 @@ function App() {
     subText: getSeatSubText(id),
   })
 
-  return (
+   return (
     <div>
+      <button
+        className="reservation-panel-toggle"
+        onClick={() => setReservationPanelOpen((prev) => !prev)}
+      >
+        ☰
+      </button>
+
+      <div
+        className={`reservation-side-panel ${
+          reservationPanelOpen ? "open" : ""
+        }`}
+      >
+        <div className="reservation-side-title">予約表</div>
+
+        {getSortedReservations().map((reservation) => (
+          <div key={reservation.id} className="reservation-card">
+            <label className="reservation-check-row">
+              <input
+                type="checkbox"
+                onChange={() => {
+                  handleSeatReservation(reservation)
+                }}
+              />
+
+              <span>{reservation.time}</span>
+            </label>
+
+            <div>{reservation.customerName}</div>
+            <div>{getReservationPeopleText(reservation)}</div>
+            <div>席：{reservation.displaySeatNumber}</div>
+
+            {reservation.memo && (
+              <div className="reservation-memo">
+                {reservation.memo}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
       <div className="notification-bar">
         <div className="current-time-box">
           <div>{formatCurrentTime(currentTime)}</div>
-
-          <button
-            onClick={() => {
-              setReservationMode(true)
-              setSelectedReserveSeats([])
-              setReserveTimeText("")
-              setReserveDisplayNumber("")
-            }}
-            className="reserve-start-button"
-          >
-            +予約
-          </button>
         </div>
 
         <div className="notification-area">
           {reservationMode && (
-          <div className="availability-area">
-            {[...availabilityItems]
-              .sort((a, b) => a.createdAt - b.createdAt)
-              .map((item) => (
-                <div key={item.id} className="availability-item">
-                  {item.text}
-                </div>
-              ))}
-          </div>
-        )}
+            <div className="availability-area">
+              {[...availabilityItems]
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .map((item) => (
+                  <div key={item.id} className="availability-item">
+                    {item.text}
+                  </div>
+                ))}
+            </div>
+          )}
 
           {notifications.map((n, index) => (
             <div
@@ -960,6 +1124,46 @@ function App() {
           </div>
 
           <div>
+            お名前：
+            <input
+              value={reserveCustomerName}
+              onChange={(e) => setReserveCustomerName(e.target.value)}
+              placeholder="お客様名"
+              className="reservation-input"
+            />
+          </div>
+
+          <div>
+            大人：
+            <input
+              type="number"
+              min={0}
+              value={reserveAdultCount}
+              onChange={(e) => setReserveAdultCount(Number(e.target.value))}
+              className="reservation-number-input"
+            />
+
+            子供：
+            <input
+              type="number"
+              min={0}
+              value={reserveChildCount}
+              onChange={(e) => setReserveChildCount(Number(e.target.value))}
+              className="reservation-number-input"
+            />
+          </div>
+
+          <div>
+            メモ：
+            <input
+              value={reserveMemo}
+              onChange={(e) => setReserveMemo(e.target.value)}
+              placeholder="メモ"
+              className="reservation-input"
+            />
+          </div>
+
+          <div>
             予約時間：
             <select
               value={reserveTimeText}
@@ -983,6 +1187,10 @@ function App() {
               setSelectedReserveSeats([])
               setReserveTimeText("")
               setReserveDisplayNumber("")
+              setReserveCustomerName("")
+              setReserveAdultCount(2)
+              setReserveChildCount(0)
+              setReserveMemo("")
             }}
           >
             キャンセル
