@@ -19,6 +19,9 @@ type Props = {
   onStartEatingSeats?: () => void
   onClearEatingSelection?: () => void
   onStartReservation?: () => void
+  isReservedSeat?: boolean
+  onStartReservedSeat?: () => void
+  onCancelReservation?: () => void
   status?:
     | "empty"
     | "occupied"
@@ -48,6 +51,9 @@ function Seat({
   onStartEatingSeats,
   onClearEatingSelection,
   onStartReservation,
+  isReservedSeat = false,
+  onStartReservedSeat,
+  onCancelReservation,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
 
@@ -165,48 +171,86 @@ function Seat({
 
         </button>
           {showMenu && (
-              <div
-                className="seat-menu"
-                style={{
-                  position: "absolute",
-                  top: top + height + 6,
-                  left: left,
-                  zIndex: 1000,
-                }}
-              >
-              <button
-                onClick={() => {
-                  handleStart()
-                }}
-              >
-                着席開始
-              </button>
+            <div
+              className="seat-menu"
+              style={{
+                position: "absolute",
+                top: top + height + 8,
+                left,
+                zIndex: 1000,
+              }}
+            >
+              {isReservedSeat ? (
+                <>
+                  <button
+                    onClick={() => {
+                      onStartReservedSeat?.()
+                      setShowMenu(false)
+                      onClearEatingSelection?.()
+                    }}
+                  >
+                    着席開始
+                  </button>
 
-              <button
-                onClick={() => {
-                  onStartReservation?.()
-                  setShowMenu(false)
-                  onClearEatingSelection?.()
-                }}
-              >
-                予約
-              </button>
+                  <button
+                    onClick={() => {
+                      alert("割り込み着席は次の段階で実装します")
+                    }}
+                  >
+                    割り込み着席
+                  </button>
 
-              <button
-                onClick={() => {
-                  handleLeave()
-                }}
-              >
-                退店
-              </button>
+                  <button
+                    className="danger-menu-button"
+                    onClick={() => {
+                      onCancelReservation?.()
+                      setShowMenu(false)
+                      onClearEatingSelection?.()
+                    }}
+                  >
+                    予約キャンセル
+                  </button>
 
-              <button
-                onClick={() => {
-                  handleClose()
-                }}
-              >
-                閉じる
-              </button>
+                  <button
+                    onClick={() => {
+                      alert("席移動は次の段階で実装します")
+                    }}
+                  >
+                    席移動
+                  </button>
+
+                  <button onClick={handleClose}>
+                    閉じる
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={handleStart}>
+                    着席開始
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onStartReservation?.()
+                      setShowMenu(false)
+                      onClearEatingSelection?.()
+                    }}
+                  >
+                    予約
+                  </button>
+
+                  <button
+                    className="danger-menu-button"
+                    onClick={handleLeave}
+                  >
+                    退店
+                  </button>
+
+                  <button onClick={handleClose}>
+                    閉じる
+                  </button>
+                </>
+              )}
             </div>
           )}
     </>

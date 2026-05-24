@@ -521,6 +521,73 @@ function App() {
     })
   }
 
+  const getReservationBySeatId = (seatId: string) => {
+    return reservations.find(
+      (reservation) =>
+        reservation.status === "reserved" &&
+        reservation.seats.includes(seatId)
+    )
+  }
+
+  const handleStartReservedSeat = (seatId: string) => {
+    const reservation = getReservationBySeatId(seatId)
+
+    if (!reservation) {
+      alert("この席の予約が見つかりません")
+      return
+    }
+
+    handleSeatReservation(reservation)
+  }
+
+  const handleCancelReservation = (seatId: string) => {
+    const reservation = getReservationBySeatId(seatId)
+
+    if (!reservation) {
+      alert("この席の予約が見つかりません")
+      return
+    }
+
+    const ok = window.confirm(
+      `${reservation.displaySeatNumber}席の予約をキャンセルしますか？`
+    )
+
+    if (!ok) return
+
+    reservation.seats.forEach((id) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [id]: "empty",
+      }))
+
+      setReservationTimes((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+
+      setReservationLabels((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+    })
+
+    setReservations((prev) =>
+      prev.map((r) =>
+        r.id === reservation.id
+          ? {
+              ...r,
+              status: "cancelled",
+            }
+          : r
+      )
+    )
+
+    setSelectedReserveSeats([])
+    setReservationMode(false)
+  }
+
   const handleLeave = (id: string) => {
     setConfirmLeaveSeatId(id)
   }
@@ -1002,6 +1069,12 @@ function App() {
     onSeatClick: handleReserveSeatClick,
     isReserveSelected: selectedReserveSeats.includes(id),
     isEatingSelected: selectedEatingSeats.includes(id),
+    isReservedSeat:
+      seatStatuses[id] === "reserved2h" ||
+      seatStatuses[id] === "reserved1h" ||
+      seatStatuses[id] === "reserved30m",
+    onStartReservedSeat: () => handleStartReservedSeat(id),
+    onCancelReservation: () => handleCancelReservation(id),
     onEatingSeatClick: handleEatingSeatClick,
     onOpenSeatMenu: handleOpenSeatMenu,
     onStartEatingSeats: handleStartEatingSeats,

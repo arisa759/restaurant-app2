@@ -592,3 +592,7 @@
 .seat-menu button:hover {
   background-color: #f2f2f2;
 }
+
+.seat-menu .danger-menu-button {
+  color: red;
+}
