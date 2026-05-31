@@ -656,13 +656,21 @@ function App() {
   const handleStartSeatMove = (seatId: string) => {
     const group = getEatingGroupBySeatId(seatId)
 
-    const sourceSeats = group ? group.seats : [seatId]
+    const sourceSeats =
+      selectedEatingSeats.length > 1
+        ? [...selectedEatingSeats]
+        : group
+        ? [...group.seats]
+        : [seatId]
 
     setMovingSeatIds(sourceSeats)
     setSelectedMoveTargetSeats([])
     setMovingDisplayNumber("")
     setSeatMoveMode(true)
+
     setActiveSeatId(null)
+    setSelectedEatingSeats([])
+    setEatingDisplayNumber("")
   }
 
   const handleMoveTargetSeatClick = (seatId: string) => {
@@ -916,12 +924,21 @@ function App() {
   setMovingSeatIds([])
   setSelectedMoveTargetSeats([])
   setMovingDisplayNumber("")
-}
+
+  setActiveSeatId(null)
+  setSelectedEatingSeats([])
+  setEatingDisplayNumber("")
+  setSelectedReserveSeats([])
+  }
   const handleCancelSeatMove = () => {
     setSeatMoveMode(false)
     setMovingSeatIds([])
     setSelectedMoveTargetSeats([])
     setMovingDisplayNumber("")
+
+    setActiveSeatId(null)
+    setSelectedEatingSeats([])
+    setEatingDisplayNumber("")
   }
 
   const handleLeave = (id: string) => {
