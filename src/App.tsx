@@ -1167,7 +1167,8 @@ function App() {
         childCount: reserveChildCount,
         memo: reserveMemo,
         seats: [...selectedReserveSeats],
-        displaySeatNumber: reservationSeatNumber,
+        displaySeatNumber:
+        reservationSeatNumber || getRepresentativeSeatId(selectedReserveSeats),
         createdAt: Date.now(),
         status: "reserved",
       },
