@@ -290,34 +290,54 @@ function Seat({
                     閉じる
                   </button>
                 </>
-              ) : (
-                <>
-                  <button onClick={handleStart}>
-                    着席開始
-                  </button>
+            ) : (
+              <>
+                {status === "empty" && (
+                  <>
+                    <button onClick={handleStart}>
+                      着席開始
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      onStartReservation?.()
-                      setShowMenu(false)
-                      onClearEatingSelection?.()
-                    }}
-                  >
-                    予約
-                  </button>
+                    <button
+                      onClick={() => {
+                        onStartReservation?.()
+                        setShowMenu(false)
+                        onClearEatingSelection?.()
+                      }}
+                    >
+                      予約
+                    </button>
+                  </>
+                )}
 
-                  <button
-                    className="danger-menu-button"
-                    onClick={handleLeave}
-                  >
-                    退店
-                  </button>
+                {(status === "occupied" ||
+                  status === "donabe" ||
+                  status === "food") && (
+                  <>
+                    <button
+                      onClick={() => {
+                        onStartSeatMove?.()
+                        setShowMenu(false)
+                        onClearEatingSelection?.()
+                      }}
+                    >
+                      席移動
+                    </button>
 
-                  <button onClick={handleClose}>
-                    閉じる
-                  </button>
-                </>
-              )}
+                    <button
+                      className="danger-menu-button"
+                      onClick={handleLeave}
+                    >
+                      退店
+                    </button>
+                  </>
+                )}
+
+                <button onClick={handleClose}>
+                  閉じる
+                </button>
+              </>
+            )}
             </div>
           )}
     </>

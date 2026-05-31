@@ -1498,7 +1498,7 @@ const seatCommonProps = (id: string) => ({
             </div>
 
             <div className="reservation-seat">
-              代表席：{reservation.displaySeatNumber}
+              席番号：{reservation.displaySeatNumber}
             </div>
 
             {reservation.memo && (
