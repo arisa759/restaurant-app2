@@ -1497,7 +1497,11 @@ const seatCommonProps = (id: string) => ({
               </div>
 
               <div className="reservation-seat">
-                席：{reservation.displaySeatNumber}
+                <div className="reservation-seat">
+                  席：
+                  {reservation.displaySeatNumber ||
+                    getRepresentativeSeatId(reservation.seats)}
+                </div>
               </div>
             </div>
 
