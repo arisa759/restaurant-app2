@@ -532,7 +532,10 @@
 }
 
 .reservation-seat {
-  min-width: 70px;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
 }
 
 .reservation-check-row {
