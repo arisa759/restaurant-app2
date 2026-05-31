@@ -597,6 +597,7 @@ function App() {
   }
 
   const now = new Date()
+  const originalReserveTime = reservationTimes[reservation.seats[0]]
 
   const targetSeats =
     selectedEatingSeats.length > 0
@@ -613,6 +614,13 @@ function App() {
       ...prev,
       [id]: now,
     }))
+
+    if (originalReserveTime) {
+      setReservationTimes((prev) => ({
+        ...prev,
+        [id]: originalReserveTime,
+      }))
+    }
   })
 
   const representativeSeatId = getRepresentativeSeatId(targetSeats)
@@ -1214,6 +1222,55 @@ function App() {
       const now = new Date()
 
       Object.entries(seatTimes).forEach(([id, startTime]) => {
+
+        const isOverrideSeat = overrideReservations.some((group) =>
+          group.seats.includes(id)
+        )
+
+        if (isOverrideSeat) return
+
+        overrideReservations.forEach((override) => {
+          const representativeSeatId = getRepresentativeSeatId(override.seats)
+          const reserveTime = reservationTimes[representativeSeatId]
+
+          if (!reserveTime) return
+
+          const diff = Math.ceil(
+            (reserveTime.getTime() - now.getTime()) / 1000 / 60
+          )
+
+          const donabeKey = `${representativeSeatId}-override-donabe`
+          const foodKey = `${representativeSeatId}-override-food`
+
+          if (diff <= 60 && diff > 30 && !firedRef.current[donabeKey]) {
+            firedRef.current[donabeKey] = true
+
+            setNotifications((prev) => [
+              ...prev,
+              {
+                id: donabeKey,
+                seatId: representativeSeatId,
+                type: "donabe",
+                text: `土鍋 ${override.displaySeatNumber}`,
+              },
+            ])
+          }
+
+          if (diff <= 30 && diff >= 0 && !firedRef.current[foodKey]) {
+            firedRef.current[foodKey] = true
+
+            setNotifications((prev) => [
+              ...prev,
+              {
+                id: foodKey,
+                seatId: representativeSeatId,
+                type: "food",
+                text: `フード ${override.displaySeatNumber}`,
+              },
+            ])
+          }
+        })
+
         const { targetSeatId, displaySeatId } = getNotificationSeatInfo(id)
 
         if (targetSeatId !== id) return
@@ -1254,7 +1311,7 @@ function App() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [seatTimes, eatingGroups, eatingLabels])
+  }, [seatTimes, eatingGroups, eatingLabels, overrideReservations, reservationTimes])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1370,6 +1427,29 @@ function App() {
 
   const getSeatSubText = (id: string) => {
     const status = seatStatuses[id]
+
+    const overrideReservation = overrideReservations.find((group) =>
+      group.seats.includes(id)
+    )
+
+    if (overrideReservation) {
+      const reservation = reservations.find(
+        (r) => r.id === overrideReservation.reservationId
+      )
+
+      if (!reservation) return ""
+
+      const reserveTime = reservationTimes[id]
+      if (!reserveTime) return ""
+
+      const diff = Math.ceil(
+        (reserveTime.getTime() - currentTime.getTime()) / 1000 / 60
+      )
+
+      if (diff <= 0) return "予約時刻"
+
+      return `あと${diff}分`
+    }
 
     if (
       status === "occupied" ||
