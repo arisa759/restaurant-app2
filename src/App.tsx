@@ -1231,7 +1231,11 @@ function App() {
 
         overrideReservations.forEach((override) => {
           const representativeSeatId = getRepresentativeSeatId(override.seats)
-          const reserveTime = reservationTimes[representativeSeatId]
+          const reserveTime =
+            reservationTimes[representativeSeatId] ||
+            override.seats
+              .map((seatId) => reservationTimes[seatId])
+              .find(Boolean)
 
           if (!reserveTime) return
 
@@ -1242,7 +1246,7 @@ function App() {
           const donabeKey = `${representativeSeatId}-override-donabe`
           const foodKey = `${representativeSeatId}-override-food`
 
-          if (diff <= 60 && diff > 30 && !firedRef.current[donabeKey]) {
+          if (diff <= 60 && diff >= 0 && !firedRef.current[donabeKey]) {
             firedRef.current[donabeKey] = true
 
             setNotifications((prev) => [
