@@ -1221,6 +1221,53 @@ function App() {
     const timer = window.setInterval(() => {
       const now = new Date()
 
+      overrideReservations.forEach((override) => {
+        const representativeSeatId = getRepresentativeSeatId(override.seats)
+
+        const reserveTime =
+          reservationTimes[representativeSeatId] ||
+          override.seats
+            .map((seatId) => reservationTimes[seatId])
+            .find((time): time is Date => Boolean(time))
+
+        if (!reserveTime) return
+
+        const diff = Math.ceil(
+          (reserveTime.getTime() - now.getTime()) / 1000 / 60
+        )
+
+        const donabeKey = `${override.reservationId}-override-donabe`
+        const foodKey = `${override.reservationId}-override-food`
+
+        if (diff <= 60 && diff >= 0 && !firedRef.current[donabeKey]) {
+          firedRef.current[donabeKey] = true
+
+          setNotifications((prev) => [
+            ...prev,
+            {
+              id: donabeKey,
+              seatId: representativeSeatId,
+              type: "donabe",
+              text: `土鍋 ${override.displaySeatNumber}`,
+            },
+          ])
+        }
+
+        if (diff <= 30 && diff >= 0 && !firedRef.current[foodKey]) {
+          firedRef.current[foodKey] = true
+
+          setNotifications((prev) => [
+            ...prev,
+            {
+              id: foodKey,
+              seatId: representativeSeatId,
+              type: "food",
+              text: `フード ${override.displaySeatNumber}`,
+            },
+          ])
+        }
+      })
+
       Object.entries(seatTimes).forEach(([id, startTime]) => {
 
         const isOverrideSeat = overrideReservations.some((group) =>
