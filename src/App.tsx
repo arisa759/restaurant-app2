@@ -625,6 +625,7 @@ function App() {
 
   const representativeSeatId = getRepresentativeSeatId(targetSeats)
   const displayNumber = representativeSeatId
+  const reservationIdForOverride = reservation.id
 
   setEatingLabels((prev) => {
     const next = { ...prev }
@@ -652,7 +653,7 @@ function App() {
   setOverrideReservations((prev) => [
     ...prev,
     {
-      reservationId: reservation.id,
+      reservationId: reservationIdForOverride,
       seats: [...targetSeats],
       displaySeatNumber: displayNumber,
     },
@@ -1275,52 +1276,6 @@ function App() {
         )
 
         if (isOverrideSeat) return
-
-        overrideReservations.forEach((override) => {
-          const representativeSeatId = getRepresentativeSeatId(override.seats)
-          const reserveTime =
-            reservationTimes[representativeSeatId] ||
-            override.seats
-              .map((seatId) => reservationTimes[seatId])
-              .find(Boolean)
-
-          if (!reserveTime) return
-
-          const diff = Math.ceil(
-            (reserveTime.getTime() - now.getTime()) / 1000 / 60
-          )
-
-          const donabeKey = `${representativeSeatId}-override-donabe`
-          const foodKey = `${representativeSeatId}-override-food`
-
-          if (diff <= 60 && diff >= 0 && !firedRef.current[donabeKey]) {
-            firedRef.current[donabeKey] = true
-
-            setNotifications((prev) => [
-              ...prev,
-              {
-                id: donabeKey,
-                seatId: representativeSeatId,
-                type: "donabe",
-                text: `土鍋 ${override.displaySeatNumber}`,
-              },
-            ])
-          }
-
-          if (diff <= 30 && diff >= 0 && !firedRef.current[foodKey]) {
-            firedRef.current[foodKey] = true
-
-            setNotifications((prev) => [
-              ...prev,
-              {
-                id: foodKey,
-                seatId: representativeSeatId,
-                type: "food",
-                text: `フード ${override.displaySeatNumber}`,
-              },
-            ])
-          }
-        })
 
         const { targetSeatId, displaySeatId } = getNotificationSeatInfo(id)
 
