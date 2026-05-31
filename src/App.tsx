@@ -723,15 +723,6 @@ function App() {
     sourceStatus === "donabe" ||
     sourceStatus === "food"
 
-  const sourceEatingLabel =
-    eatingLabels[sourceRepresentativeSeatId] ||
-    sourceRepresentativeSeatId
-
-  const sourceReservationLabel =
-    sourceReservation?.displaySeatNumber ||
-    reservationLabels[sourceRepresentativeSeatId] ||
-    sourceRepresentativeSeatId
-
   const sourceStartTime = seatTimes[sourceRepresentativeSeatId]
   const sourceReserveTime =
     sourceReservation
@@ -739,8 +730,7 @@ function App() {
       : reservationTimes[sourceRepresentativeSeatId]
 
   const targetLabel =
-    movingDisplayNumber ||
-    (sourceReservation ? sourceReservationLabel : sourceEatingLabel)
+    movingDisplayNumber || targetRepresentativeSeatId
 
   // 1. 移動元の席情報を完全に削除
   movingSeatIds.forEach((oldSeatId) => {
