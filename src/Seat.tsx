@@ -73,6 +73,9 @@ function Seat({
   onStartSeatMove,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: top + height + 8, left })
+  const [dragging, setDragging] = useState(false)
+  const dragOffsetRef = useRef({ x: 0, y: 0 })
 
   const timerRef = useRef<number | null>(null)
   const longPressRef = useRef(false)
@@ -85,7 +88,14 @@ function Seat({
 
     timerRef.current = window.setTimeout(() => {
       longPressRef.current = true
+
+      setMenuPosition({
+        top: top + height + 8,
+        left: left,
+      })
+
       setShowMenu(true)
+
       onOpenSeatMenu?.(id)
     }, 600)
   }
@@ -111,6 +121,31 @@ function Seat({
     setShowMenu(false)
     onClearEatingSelection?.()
   }
+
+  const handleMenuPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setDragging(true)
+
+    dragOffsetRef.current = {
+      x: e.clientX - menuPosition.left,
+      y: e.clientY - menuPosition.top,
+    }
+
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handleMenuPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return
+
+    setMenuPosition({
+      left: e.clientX - dragOffsetRef.current.x,
+      top: e.clientY - dragOffsetRef.current.y,
+    })
+  }
+
+  const handleMenuPointerUp = () => {
+    setDragging(false)
+  }
+
   const seatColor =
   status === "food"
     ? "red"
@@ -197,11 +232,16 @@ function Seat({
           {showMenu && (
             <div
               className="seat-menu"
+              onPointerDown={handleMenuPointerDown}
+              onPointerMove={handleMenuPointerMove}
+              onPointerUp={handleMenuPointerUp}
               style={{
                 position: "absolute",
-                top: top + height + 8,
-                left,
+                top: menuPosition.top,
+                left: menuPosition.left,
                 zIndex: 1000,
+                touchAction: "none",
+                cursor: dragging ? "grabbing" : "grab",
               }}
             >
               {isReservedSeat ? (

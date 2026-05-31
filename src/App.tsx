@@ -704,24 +704,37 @@ function App() {
       reservation.seats.some((seatId) => movingSeatIds.includes(seatId))
   )
 
-  const sourceIsEating = movingSeatIds.some((seatId) =>
-    ["occupied", "donabe", "food"].includes(seatStatuses[seatId])
-  )
-
   const sourceRepresentativeSeatId = getRepresentativeSeatId(movingSeatIds)
-  const sourceLabel =
-    eatingLabels[sourceRepresentativeSeatId] ||
-    reservationLabels[sourceRepresentativeSeatId] ||
-    sourceRepresentativeSeatId
-
-  const sourceStartTime = seatTimes[sourceRepresentativeSeatId] || new Date()
-
   const targetRepresentativeSeatId =
     getRepresentativeSeatId(selectedMoveTargetSeats)
 
-  const targetLabel =
-    movingDisplayNumber || targetRepresentativeSeatId || sourceLabel
+  const sourceStatus = seatStatuses[sourceRepresentativeSeatId] ?? "empty"
 
+  const sourceIsEating =
+    sourceStatus === "occupied" ||
+    sourceStatus === "donabe" ||
+    sourceStatus === "food"
+
+  const sourceEatingLabel =
+    eatingLabels[sourceRepresentativeSeatId] ||
+    sourceRepresentativeSeatId
+
+  const sourceReservationLabel =
+    sourceReservation?.displaySeatNumber ||
+    reservationLabels[sourceRepresentativeSeatId] ||
+    sourceRepresentativeSeatId
+
+  const sourceStartTime = seatTimes[sourceRepresentativeSeatId]
+  const sourceReserveTime =
+    sourceReservation
+      ? reservationTimes[sourceReservation.seats[0]]
+      : reservationTimes[sourceRepresentativeSeatId]
+
+  const targetLabel =
+    movingDisplayNumber ||
+    (sourceReservation ? sourceReservationLabel : sourceEatingLabel)
+
+  // 1. 移動元の席情報を完全に削除
   movingSeatIds.forEach((oldSeatId) => {
     setSeatStatuses((prev) => ({
       ...prev,
@@ -729,6 +742,12 @@ function App() {
     }))
 
     setSeatTimes((prev) => {
+      const next = { ...prev }
+      delete next[oldSeatId]
+      return next
+    })
+
+    setReservationTimes((prev) => {
       const next = { ...prev }
       delete next[oldSeatId]
       return next
@@ -750,21 +769,22 @@ function App() {
     firedRef.current[`${oldSeatId}-food`] = false
   })
 
-  selectedMoveTargetSeats.forEach((newSeatId) => {
-    setSeatStatuses((prev) => ({
-      ...prev,
-      [newSeatId]: sourceIsEating ? "occupied" : "reserved2h",
-    }))
-
-    if (sourceIsEating) {
-      setSeatTimes((prev) => ({
-        ...prev,
-        [newSeatId]: sourceStartTime,
-      }))
-    }
-  })
-
+  // 2. 着席情報を移動先へ反映
   if (sourceIsEating) {
+    selectedMoveTargetSeats.forEach((newSeatId) => {
+      setSeatStatuses((prev) => ({
+        ...prev,
+        [newSeatId]: sourceStatus,
+      }))
+
+      if (sourceStartTime) {
+        setSeatTimes((prev) => ({
+          ...prev,
+          [newSeatId]: sourceStartTime,
+        }))
+      }
+    })
+
     setEatingLabels((prev) => {
       const next = { ...prev }
 
@@ -775,8 +795,46 @@ function App() {
 
       return next
     })
+
+    setEatingGroups((prev) => {
+      const withoutOldGroup = prev.filter(
+        (group) =>
+          !group.seats.some((seatId) => movingSeatIds.includes(seatId))
+      )
+
+      if (selectedMoveTargetSeats.length <= 1) {
+        return withoutOldGroup
+      }
+
+      return [
+        ...withoutOldGroup,
+        {
+          seats: [...selectedMoveTargetSeats],
+          representativeSeatId: targetRepresentativeSeatId,
+          displayNumber: targetLabel,
+        },
+      ]
+    })
+
+    removeAvailabilityBySeats(movingSeatIds)
+
+    if (sourceStartTime) {
+      addAvailabilityItem(
+        selectedMoveTargetSeats,
+        targetLabel,
+        sourceStartTime
+      )
+    }
+  } else {
+    setEatingGroups((prev) =>
+      prev.filter(
+        (group) =>
+          !group.seats.some((seatId) => movingSeatIds.includes(seatId))
+      )
+    )
   }
 
+  // 3. 予約情報を移動先へ反映
   if (sourceReservation) {
     setReservations((prev) =>
       prev.map((reservation) =>
@@ -790,6 +848,15 @@ function App() {
       )
     )
 
+    if (sourceReserveTime) {
+      selectedMoveTargetSeats.forEach((seatId) => {
+        setReservationTimes((prev) => ({
+          ...prev,
+          [seatId]: sourceReserveTime,
+        }))
+      })
+    }
+
     setReservationLabels((prev) => {
       const next = { ...prev }
 
@@ -801,48 +868,49 @@ function App() {
       return next
     })
 
-    selectedMoveTargetSeats.forEach((seatId) => {
-      const oldReserveTime =
-        reservationTimes[sourceReservation.seats[0]]
-
-      if (oldReserveTime) {
-        setReservationTimes((prev) => ({
+    if (!sourceIsEating) {
+      selectedMoveTargetSeats.forEach((seatId) => {
+        setSeatStatuses((prev) => ({
           ...prev,
-          [seatId]: oldReserveTime,
+          [seatId]: "reserved2h",
         }))
+      })
+    }
+  }
+
+  // 4. 予約枠情報も移動先へ更新
+  setMergedReserveGroups((prev) =>
+    prev.map((group) => {
+      const isTargetGroup = group.seats.some((seatId) =>
+        movingSeatIds.includes(seatId)
+      )
+
+      if (!isTargetGroup) return group
+
+      return {
+        ...group,
+        seats: [...selectedMoveTargetSeats],
+        reservationSeatNumber: targetLabel,
       }
     })
-  }
+  )
 
-  setEatingGroups((prev) => {
-    const withoutOldGroup = prev.filter(
-      (group) =>
-        !group.seats.some((seatId) => movingSeatIds.includes(seatId))
-    )
+  // 5. 割り込み予約枠も移動先へ更新
+  setOverrideReservations((prev) =>
+    prev.map((group) => {
+      const isTargetGroup = group.seats.some((seatId) =>
+        movingSeatIds.includes(seatId)
+      )
 
-    if (!sourceIsEating || selectedMoveTargetSeats.length <= 1) {
-      return withoutOldGroup
-    }
+      if (!isTargetGroup) return group
 
-    return [
-      ...withoutOldGroup,
-      {
+      return {
+        ...group,
         seats: [...selectedMoveTargetSeats],
-        representativeSeatId: targetRepresentativeSeatId,
-        displayNumber: targetLabel,
-      },
-    ]
-  })
-
-  removeAvailabilityBySeats(movingSeatIds)
-
-  if (sourceIsEating) {
-    addAvailabilityItem(
-      selectedMoveTargetSeats,
-      targetLabel,
-      sourceStartTime
-    )
-  }
+        displaySeatNumber: targetLabel,
+      }
+    })
+  )
 
   setSeatMoveMode(false)
   setMovingSeatIds([])
