@@ -1476,6 +1476,9 @@ const seatCommonProps = (id: string) => ({
 
         {getSortedReservations().map((reservation) => (
           <div key={reservation.id} className="reservation-card">
+            <div style={{ color: "red" }}>
+            {JSON.stringify(reservation)}
+          </div>
             <div className="reservation-main-row">
               <label className="reservation-check-row">
                 <input
@@ -1496,13 +1499,10 @@ const seatCommonProps = (id: string) => ({
                 {getReservationPeopleText(reservation)}
               </div>
 
-              <div className="reservation-seat">
-                <div className="reservation-seat">
-                  席：
-                  {reservation.displaySeatNumber ||
-                    getRepresentativeSeatId(reservation.seats)}
-                </div>
-              </div>
+        <div className="reservation-seat">
+              席：
+              [{String(reservation.displaySeatNumber)}]
+            </div>
             </div>
 
             {reservation.memo && (
